@@ -589,9 +589,9 @@ function renderCellContent(cell,sel){
     cell.style.background = `linear-gradient(to right, ${leftColor} 50%, ${rightColor} 50%)`;
     cell.style.border = `1.5px solid ${borderColor}`;
     // Labels in split-cel
-    if(hasVmKantoor) addLabel("K","rgba(255,255,255,0.6)");
+    if(hasVmKantoor) addLabel("K","rgba(255,255,255,1)");
     if(hasVmThuis)   addLabel("T","rgba(255,255,255,0.8)");
-    if(hasNmKantoor) addLabel("K","rgba(255,255,255,0.6)");
+    if(hasNmKantoor) addLabel("K","rgba(255,255,255,1)");
     if(hasNmThuis)   addLabel("T","rgba(255,255,255,0.8)");
     // Extra bolletjes voor andere statussen (extern, vrij-heel-dag, etc.)
     const rest=dots.filter(s=>!["vm_vrij","nm_vrij","vm_kantoor","nm_kantoor","vm_thuis","nm_thuis","kantoor","thuis"].includes(s.key));
@@ -606,7 +606,7 @@ function renderCellContent(cell,sel){
     if(hasKantoor && !hasThuis){
       // Alleen kantoor: grijze achtergrond + K
       cell.style.background="rgba(255,255,255,0.22)"; cell.style.border="1.5px solid rgba(255,255,255,0.30)";
-      addLabel("K","rgba(255,255,255,0.35)");
+      addLabel("K","rgba(255,255,255,1)");
       // Extra bolletjes voor andere statussen
       dots.filter(s=>s.key!=="kantoor").forEach(s=>{ cell.appendChild(makeDot(s)); });
     } else if(hasThuis && !hasKantoor){
