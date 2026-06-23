@@ -401,7 +401,14 @@ function toggleStatus(monday,person,day,key,isTemplate){
       if(key==="vm_vrij"||key==="nm_vrij") next=next.filter(k2=>k2!=="vrij");
       // kantoor-heel-dag sluit halve-dag-kantoor uit en andersom
       if(key==="kantoor") next=next.filter(k2=>k2!=="vm_kantoor"&&k2!=="nm_kantoor");
-      if(key==="vm_kantoor"||key==="nm_kantoor") next=next.filter(k2=>k2!=="kantoor");
+      // vm+nm kantoor samen → vervang door kantoor (hele dag)
+      if(key==="vm_kantoor"||key==="nm_kantoor"){
+        next=next.filter(k2=>k2!=="kantoor");
+        if(next.includes("vm_kantoor")&&next.includes("nm_kantoor")){
+          next=next.filter(k2=>k2!=="vm_kantoor"&&k2!=="nm_kantoor");
+          next.push("kantoor");
+        }
+      }
     }
     data[person][day]=next;
     saveState();
