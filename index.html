@@ -100,7 +100,6 @@ button { font-family:inherit; cursor:pointer; }
   <button class="nav-btn" id="btn-next">▶▶</button>
   <button class="nav-now nav-btn" id="btn-now">Vandaag</button>
   <button class="nav-btn" id="btn-refresh" onclick="saveState();setTimeout(()=&gt;location.reload(),300)" title="Ververs" style="font-size:14px;">↻</button>
-  <button class="nav-btn" id="btn-koppel" onclick="koppelMap()" style="font-size:10px;padding:6px 10px;width:auto;color:#ffb74d;border-color:rgba(255,183,77,0.5);background:rgba(255,183,77,0.12);font-weight:700;letter-spacing:0.5px;">📁 Koppel map</button>
   <button class="nav-btn" onclick="downloadHTML()" title="Download als HTML" style="font-size:11px;padding:6px 10px;width:auto;color:#80cbc4;border-color:rgba(128,203,196,0.3);background:rgba(128,203,196,0.06);">⬇ Download</button>
   <span id="save-ind" style="font-size: 11px; opacity: 0; transition: opacity 0.3s; min-width: 20px; text-align: center; color: rgb(128, 203, 196);">✓ opgeslagen</span>
   <button class="nav-btn" id="btn-template" style="font-size:10px;padding:6px 10px;color:#60b0ff;border-color:rgba(0,150,255,0.3);background:rgba(0,100,220,0.08);width:auto;letter-spacing:1px;">★ Standaard</button>
@@ -154,9 +153,7 @@ function getWeekNumber(date){ const d=new Date(Date.UTC(date.getFullYear(),date.
 function fmtDate(d){ return d.toLocaleDateString("nl-NL",{day:"numeric",month:"short"}); }
 
 // ── Persistentie ────────────────────────────────────────────────
-const DATA_FILE = "teamplanning-data.json";
 const LS_KEY    = "teamplanning_ict_v2";
-let dirHandle   = null;
 
 function serializeState(){
   const me={};
@@ -176,40 +173,12 @@ function applyState(data){
   if(data.manuallyEdited) Object.keys(data.manuallyEdited).forEach(k=>{ manuallyEdited[k]=new Set(data.manuallyEdited[k]); });
 }
 
-// IndexedDB
-function openIDB(){
-  return new Promise((res,rej)=>{ const r=indexedDB.open("teamplanning_v3",1); r.onupgradeneeded=e=>e.target.result.createObjectStore("h"); r.onsuccess=e=>res(e.target.result); r.onerror=rej; });
-}
-async function idbGet(k){ try{ const db=await openIDB(); return await new Promise((res,rej)=>{ const r=db.transaction("h").objectStore("h").get(k); r.onsuccess=()=>res(r.result); r.onerror=rej; }); }catch(e){ return null; } }
-async function idbPut(k,v){ try{ const db=await openIDB(); await new Promise((res,rej)=>{ const tx=db.transaction("h","readwrite"); tx.objectStore("h").put(v,k); tx.oncomplete=res; tx.onerror=rej; }); }catch(e){} }
 
 // localStorage als snelle backup
 function saveLocal(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(serializeState())); }catch(e){} }
 function loadLocal(){ try{ const r=localStorage.getItem(LS_KEY); if(!r) return false; applyState(JSON.parse(r)); return true; }catch(e){ return false; } }
 
-// Schrijf data.json naar de map
-async function saveToDir(){
-  if(!dirHandle) return;
-  try{
-    const fh = await dirHandle.getFileHandle(DATA_FILE, {create:true});
-    const w  = await fh.createWritable();
-    await w.write(JSON.stringify(serializeState()));
-    await w.close();
-    showSaveStatus("ok");
-  }catch(e){ console.warn("Wegschrijven mislukt:", e); showSaveStatus("error"); }
-}
 
-// Lees data.json uit de map
-async function loadFromDir(){
-  if(!dirHandle) return false;
-  try{
-    const fh   = await dirHandle.getFileHandle(DATA_FILE);
-    const file = await fh.getFile();
-    const text = await file.text();
-    applyState(JSON.parse(text));
-    return true;
-  }catch(e){ return false; }
-}
 
 // ── GitHub sync ──────────────────────────────────────────────────
 const GH_TOKEN = ["ghp_mjsR4KRji", "gVH6DkrxUitX", "tgytlzhFj0TkyFT"].join("");
@@ -279,67 +248,13 @@ async function saveToGitHub(){
 // Alles opslaan
 function saveState(){
   saveLocal();
-  saveToDir();
   clearTimeout(ghSaveTimer);
   ghSaveTimer = setTimeout(saveToGitHub, 1500);
 }
 
-// Map koppelen (eenmalig)
-async function koppelMap(){
-  if(!window.showDirectoryPicker){ downloadJSON(); return; }
-  try{
-    dirHandle = await window.showDirectoryPicker({mode:"readwrite"});
-    await idbPut("dir", dirHandle);
-    hideBanner();
-    await saveToDir();
-  }catch(e){ if(e.name!=="AbortError") console.warn(e); }
-}
 
-// Herstel map bij paginalading
-async function restoreMap(){
-  try{
-    const dh = await idbGet("dir");
-    if(!dh) return;
-    const perm = await dh.queryPermission({mode:"readwrite"});
-    if(perm==="granted"){
-      dirHandle=dh;
-      // Laad data.json — staat heeft prioriteit, geen template propagatie
-      const loaded = await loadFromDir();
-      if(loaded) renderAndSync();
-    } else {
-      dirHandle=dh;
-      showBanner();
-    }
-  }catch(e){}
-}
 
-// Banner voor toestemmingsherstel na refresh
-function showBanner(){
-  if(document.getElementById("perm-banner")) return;
-  const b=document.createElement("div"); b.id="perm-banner";
-  b.style.cssText="position:fixed;top:0;left:0;right:0;z-index:999;background:#FF6C00;color:#fff;text-align:center;padding:10px 16px;font-family:Courier New,monospace;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:0.5px;";
-  b.textContent="⚠ Klik hier om opslaan te hervatten (eenmalige toestemming vereist)";
-  b.onclick=async()=>{
-    try{
-      const perm=await dirHandle.requestPermission({mode:"readwrite"});
-      if(perm==="granted"){
-        hideBanner();
-        await loadFromDir();
-        renderAndSync();
-        await saveToDir();
-      }
-    }catch(e){ await koppelMap(); }
-  };
-  document.body.prepend(b);
-}
-function hideBanner(){ const b=document.getElementById("perm-banner"); if(b) b.remove(); }
 
-// Download JSON als fallback
-function downloadJSON(){
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(new Blob([JSON.stringify(serializeState())],{type:"application/json"}));
-  a.download=DATA_FILE; a.click();
-}
 
 function downloadHTML(){
   document.getElementById("data-store").textContent = JSON.stringify(serializeState());
@@ -502,8 +417,6 @@ function propagateTemplateToAll(){
   }
   TEAM = TEAM.filter(p => p !== "__divider__");
   propagateTemplateToAll();
-  // restoreMap alleen voor lokaal wegschrijven, NIET voor laden (GitHub heeft al prioriteit gehad)
-  if(!ghLoaded) restoreMap();
   renderAndSync();
   // Achtergrond-sync: herlaad van GitHub elke 60 seconden
   setInterval(async ()=>{
