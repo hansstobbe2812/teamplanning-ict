@@ -203,6 +203,55 @@ async function loadFromGitHub(){
   return false;
 }
 
+// Helper: encode JSON naar base64 (unicode-safe)
+function encodeBase64(str){
+  const bytes = new TextEncoder().encode(str);
+  let binary = "";
+  bytes.forEach(b => binary += String.fromCharCode(b));
+  return btoa(binary);
+}
+
+// Helper: PUT een bestand naar GitHub (maakt aan of overschrijft)
+async function ghPut(path, content, message){
+  const url = `https://api.github.com/repos/${GH_REPO}/contents/${path}`;
+  // Haal SHA op als het bestand al bestaat
+  let sha = undefined;
+  try{
+    const r = await fetch(url + "?t=" + Date.now(), {headers:{"Authorization":`token ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}});
+    if(r.ok){ const d = await r.json(); sha = d.sha; }
+  }catch(e){}
+  const body = {message, content, ...(sha ? {sha} : {})};
+  return fetch(url, {method:"PUT", headers:{"Authorization":`token ${GH_TOKEN}`,"Content-Type":"application/json","Accept":"application/vnd.github.v3+json"}, body:JSON.stringify(body)});
+}
+
+// Dagelijkse backup naar backups/YYYY-MM-DD.json (maximaal 14 bewaard)
+let lastBackupDate = null;
+async function maybeBackup(stateJson){
+  const today = new Date().toISOString().slice(0,10); // YYYY-MM-DD
+  if(lastBackupDate === today) return; // al gedaan vandaag
+  lastBackupDate = today;
+  const content = encodeBase64(stateJson);
+  await ghPut(`backups/${today}.json`, content, `Backup ${today}`).catch(()=>{});
+  // Verwijder backups ouder dan 14 dagen (fire-and-forget)
+  try{
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 14);
+    const listR = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/backups?t=` + Date.now(), {headers:{"Authorization":`token ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}});
+    if(listR.ok){
+      const files = await listR.json();
+      for(const f of files){
+        const d = f.name.replace(".json","");
+        if(d < cutoff.toISOString().slice(0,10)){
+          fetch(`https://api.github.com/repos/${GH_REPO}/contents/backups/${f.name}`, {
+            method:"DELETE",
+            headers:{"Authorization":`token ${GH_TOKEN}`,"Content-Type":"application/json","Accept":"application/vnd.github.v3+json"},
+            body: JSON.stringify({message:`Verwijder oude backup ${d}`, sha: f.sha})
+          }).catch(()=>{});
+        }
+      }
+    }
+  }catch(e){}
+}
+
 async function saveToGitHub(){
   if(ghSaving) return;
   ghSaving = true;
@@ -214,11 +263,7 @@ async function saveToGitHub(){
     if(check.ok){ const cd = await check.json(); ghSha = cd.sha; }
 
     const json = JSON.stringify(serializeState());
-    // btoa werkt niet met unicode → TextEncoder aanpak
-    const bytes = new TextEncoder().encode(json);
-    let binary = "";
-    bytes.forEach(b => binary += String.fromCharCode(b));
-    const content = btoa(binary);
+    const content = encodeBase64(json);
 
     const body = {message:"Update planning", content, sha: ghSha};
     const r = await fetch(GH_API, {
@@ -230,7 +275,8 @@ async function saveToGitHub(){
       const d = await r.json();
       ghSha = d.content.sha;
       showSaveStatus("ok");
-      console.log("GitHub opgeslagen, nieuwe SHA:", ghSha);
+      // Dagelijkse backup (silent, na succesvolle save)
+      maybeBackup(json);
     } else {
       const err = await r.json().catch(()=>({}));
       console.warn("GitHub opslaan mislukt:", r.status, err.message);
