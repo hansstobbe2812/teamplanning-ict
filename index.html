@@ -625,7 +625,7 @@ function renderCellContent(cell,sel){
       dots.filter(s=>s.key!=="kantoor").forEach(s=>{ cell.appendChild(makeDot(s)); });
     } else if(hasThuis && !hasKantoor){
       // Alleen thuis: groene achtergrond + T
-      cell.style.background="rgba(76,175,80,0.18)"; cell.style.border="1.5px solid rgba(56,142,60,0.5)";
+      cell.style.background="rgba(76,175,80,0.55)"; cell.style.border="1.5px solid rgba(76,175,80,0.5)";
       addLabel("T","rgba(255,255,255,1)","full");
       dots.filter(s=>s.key!=="thuis").forEach(s=>{ cell.appendChild(makeDot(s)); });
     } else {
