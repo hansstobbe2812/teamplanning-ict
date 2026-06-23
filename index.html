@@ -51,7 +51,7 @@ button { font-family:inherit; cursor:pointer; }
 .person-row { display:grid; grid-template-columns:repeat(5,1fr); gap:3px; margin-bottom:3px; padding:2px 0; border-radius:6px; box-sizing:border-box; }
 .person-row.alt { background:rgba(255,255,255,0.015); }
 .cell-wrap { position:relative; }
-.cell { height:34px; border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:2px; flex-wrap:wrap; padding:2px; transition:all 0.12s; user-select:none; }
+.cell { height:34px; border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:2px; flex-wrap:wrap; padding:2px; transition:all 0.12s; user-select:none; position:relative; overflow:hidden; }
 .cell:hover { filter:brightness(1.3); }
 .cell.today-col { }
 .cell-empty-dot { width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,0.08); }
@@ -575,10 +575,17 @@ function renderCellContent(cell,sel){
   const needsSplit   =hasVmVrij||hasNmVrij||hasVmKantoor||hasNmKantoor||hasVmThuis||hasNmThuis;
 
   // Hulpfunctie: klein label in de cel
-  function addLabel(txt, color){
+  // side: "left"=linkerhelft, "right"=rechterhelft, "full"=heel vak
+  function addLabel(txt, color, side="full"){
     const lbl=document.createElement("span");
     lbl.textContent=txt;
-    lbl.style.cssText=`font-size:10px;font-weight:700;color:${color};letter-spacing:0.5px;line-height:1;pointer-events:none;`;
+    if(side==="left"){
+      lbl.style.cssText=`position:absolute;left:0;top:0;width:50%;height:100%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:${color};letter-spacing:0.5px;pointer-events:none;`;
+    } else if(side==="right"){
+      lbl.style.cssText=`position:absolute;right:0;top:0;width:50%;height:100%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:${color};letter-spacing:0.5px;pointer-events:none;`;
+    } else {
+      lbl.style.cssText=`font-size:10px;font-weight:700;color:${color};letter-spacing:0.5px;line-height:1;pointer-events:none;`;
+    }
     cell.appendChild(lbl);
   }
 
@@ -589,10 +596,10 @@ function renderCellContent(cell,sel){
     cell.style.background = `linear-gradient(to right, ${leftColor} 50%, ${rightColor} 50%)`;
     cell.style.border = `1.5px solid ${borderColor}`;
     // Labels in split-cel
-    if(hasVmKantoor) addLabel("K","rgba(255,255,255,1)");
-    if(hasVmThuis)   addLabel("T","rgba(255,255,255,0.8)");
-    if(hasNmKantoor) addLabel("K","rgba(255,255,255,1)");
-    if(hasNmThuis)   addLabel("T","rgba(255,255,255,0.8)");
+    if(hasVmKantoor) addLabel("K","rgba(255,255,255,1)","left");
+    if(hasVmThuis)   addLabel("T","rgba(255,255,255,1)","left");
+    if(hasNmKantoor) addLabel("K","rgba(255,255,255,1)","right");
+    if(hasNmThuis)   addLabel("T","rgba(255,255,255,1)","right");
     // Extra bolletjes voor andere statussen (extern, vrij-heel-dag, etc.)
     const rest=dots.filter(s=>!["vm_vrij","nm_vrij","vm_kantoor","nm_kantoor","vm_thuis","nm_thuis","kantoor","thuis"].includes(s.key));
     rest.forEach(s=>{ cell.appendChild(makeDot(s)); });
@@ -606,13 +613,13 @@ function renderCellContent(cell,sel){
     if(hasKantoor && !hasThuis){
       // Alleen kantoor: grijze achtergrond + K
       cell.style.background="rgba(255,255,255,0.22)"; cell.style.border="1.5px solid rgba(255,255,255,0.30)";
-      addLabel("K","rgba(255,255,255,1)");
+      addLabel("K","rgba(255,255,255,1)","full");
       // Extra bolletjes voor andere statussen
       dots.filter(s=>s.key!=="kantoor").forEach(s=>{ cell.appendChild(makeDot(s)); });
     } else if(hasThuis && !hasKantoor){
       // Alleen thuis: groene achtergrond + T
       cell.style.background="rgba(76,175,80,0.18)"; cell.style.border="1.5px solid rgba(56,142,60,0.5)";
-      addLabel("T","rgba(255,255,255,0.8)");
+      addLabel("T","rgba(255,255,255,1)","full");
       dots.filter(s=>s.key!=="thuis").forEach(s=>{ cell.appendChild(makeDot(s)); });
     } else {
       // Overige combinaties: gewone bolletjes
