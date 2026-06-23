@@ -615,7 +615,7 @@ function renderCellContent(cell,sel){
     // Altijd K of T tonen voor kantoor/thuis (hele dag)
     if(hasVrij && !hasKantoor && !hasThuis && dots.length===1){
       // Alleen vrij: rode achtergrond + V
-      cell.style.background="rgba(229,57,53,0.18)"; cell.style.border="1.5px solid rgba(229,57,53,0.5)";
+      cell.style.background="rgba(229,57,53,0.55)"; cell.style.border="1.5px solid rgba(229,57,53,0.5)";
       addLabel("V","rgba(255,255,255,1)","full");
     } else if(hasKantoor && !hasThuis){
       // Alleen kantoor: zelfde grijs als halve-dag kantoor
