@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="nl"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TeamPlanning ICT</title>
+<style>
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+body { min-height:100vh; background:linear-gradient(160deg,#0d0d1a 0%,#111827 60%,#0a1628 100%); font-family:'Courier New',monospace; color:#e8e8f0; padding:20px 16px; }
+button { font-family:inherit; cursor:pointer; }
+.header { text-align:center; margin-bottom:20px; }
+.header h1 { font-size:24px; font-weight:700; color:#fff; letter-spacing:-0.5px; }
+.nav { display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:20px; flex-wrap:wrap; }
+.nav-btn { width:34px; height:34px; border-radius:7px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:13px; display:flex; align-items:center; justify-content:center; }
+.nav-btn:hover { background:rgba(255,255,255,0.12); }
+.nav-info { font-size:12px; color:#666; text-align:center; min-width:180px; }
+.nav-now { font-size:10px; padding:6px 10px; color:#80cbc4; border:1px solid rgba(128,203,196,0.3); background:rgba(128,203,196,0.06); border-radius:7px; width:auto; }
+.nav-now:hover { background:rgba(128,203,196,0.12); }
+.scroll-wrap { overflow-x:auto; }
+.grid-layout { min-width:640px; max-width:1100px; margin:0 auto; display:flex; gap:10px; }
+.name-col { width:110px; flex-shrink:0; }
+.name-spacer { height:86px; }
+.name-row { height:38px; margin-bottom:3px; display:flex; align-items:center; gap:7px; padding:2px 4px; border-radius:6px; }
+.name-row.alt { background:rgba(255,255,255,0.015); }
+.avatar { width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:#fff; flex-shrink:0; }
+.name-label { font-size:12px; color:#d0d0d0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.name-label.self { color:#FF6C00; font-weight:700; }
+.week-panel { flex:1; min-width:0; border-radius:14px; padding:14px 12px; position:relative; }
+.week-panel.current { background:rgba(255,108,0,0.04); border:1px solid rgba(255,108,0,0.25); }
+.week-panel.other   { background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.07); }
+.week-panel.template { background:rgba(0,61,122,0.15); border:1px solid rgba(0,150,255,0.3); }
+.week-header { display:flex; align-items:center; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
+.week-badge { border-radius:8px; padding:4px 14px; font-size:14px; font-weight:800; letter-spacing:1px; }
+.week-badge.current  { background:rgba(255,108,0,0.2);  border:1px solid rgba(255,108,0,0.5);   color:#FF6C00; }
+.week-badge.other    { background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12); color:#aaa; }
+.week-badge.template { background:rgba(0,100,220,0.2);  border:1px solid rgba(0,150,255,0.4);   color:#60b0ff; }
+.week-lbl { font-size:10px; letter-spacing:2px; text-transform:uppercase; }
+.week-lbl.current  { color:#FF6C00; opacity:0.7; }
+.week-lbl.other    { color:#555; }
+.week-lbl.template { color:#60b0ff; opacity:0.8; }
+.reset-btn { margin-left:auto; font-size:9px; padding:3px 8px; border-radius:5px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#666; cursor:pointer; letter-spacing:1px; text-transform:uppercase; }
+.reset-btn:hover { color:#aaa; background:rgba(255,255,255,0.1); }
+.day-header { display:grid; grid-template-columns:repeat(5,1fr); gap:3px; margin-bottom:6px; }
+.day-hd { text-align:center; border-radius:6px; padding:4px 2px; }
+.day-hd.today-col { background:rgba(255,213,128,0.08); }
+.day-hd-name { font-size:12px; font-weight:800; color:#fff; letter-spacing:1px; }
+.day-hd-name.today-col { color:#FFD580; font-size:14px; }
+.day-hd-date { font-size:9px; color:#555; margin-top:1px; }
+.day-hd-date.today-col { color:#FFD58099; }
+.today-badge { font-size:8px; letter-spacing:1px; text-transform:uppercase; color:#FFD580; background:rgba(255,213,128,0.12); border-radius:3px; padding:1px 4px; margin-top:2px; display:inline-block; }
+.day-hd-count { margin-top:2px; font-size:9px; font-weight:600; min-height:12px; }
+.person-row { display:grid; grid-template-columns:repeat(5,1fr); gap:3px; margin-bottom:3px; padding:2px 0; border-radius:6px; box-sizing:border-box; }
+.person-row.alt { background:rgba(255,255,255,0.015); }
+.cell-wrap { position:relative; }
+.cell { height:34px; border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px; transition:all 0.12s; user-select:none; }
+.cell:hover { filter:brightness(1.3); }
+.cell.today-col { }
+.cell-empty-dot { width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,0.08); }
+.dot { width:11px; height:11px; border-radius:50%; flex-shrink:0; }
+.cross::before,.cross::after { content:""; position:absolute; background:#e53935; border-radius:2px; width:40%; height:2px; top:50%; left:50%; }
+.cross::before { transform:translate(-50%,-50%) rotate(45deg); }
+.cross::after  { transform:translate(-50%,-50%) rotate(-45deg); }
+.half-indicator { display:flex; align-items:center; justify-content:center; gap:2px; width:100%; height:100%; }
+.half-circle-left  { width:13px; height:13px; border-radius:50%; border:1.5px solid #e53935; background:linear-gradient(to right,#e53935 50%,transparent 50%); flex-shrink:0; }
+.half-circle-right { width:13px; height:13px; border-radius:50%; border:1.5px solid #e53935; background:linear-gradient(to left,#e53935 50%,transparent 50%); flex-shrink:0; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+.today-col-overlay {
+  position:absolute; pointer-events:none; z-index:10;
+  border:2.5px solid #FFD580;
+  border-radius:8px;
+  box-shadow:0 0 12px rgba(255,213,128,0.25);
+  background:rgba(255,213,128,0.04);
+}
+.divider { width:1px; background:rgba(255,255,255,0.06); flex-shrink:0; border-radius:1px; }
+.popup { position:absolute; top:calc(100% + 6px); left:50%; transform:translateX(-50%); z-index:200; background:#1a1a2e; border:1px solid rgba(255,255,255,0.18); border-radius:10px; padding:8px 6px; min-width:172px; box-shadow:0 8px 32px rgba(0,0,0,0.6); }
+.popup-title { font-size:9px; color:#555; letter-spacing:2px; text-transform:uppercase; text-align:center; margin-bottom:6px; }
+.popup-item { display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:7px; cursor:pointer; margin-bottom:2px; transition:all 0.1s; border:1px solid transparent; }
+.popup-item:hover { background:rgba(255,255,255,0.06); }
+.popup-dot { width:13px; height:13px; border-radius:50%; flex-shrink:0; }
+.popup-label { font-size:11px; transition:color 0.1s; }
+.popup-check { margin-left:auto; font-size:12px; }
+.popup-close { margin-top:6px; padding:6px 8px; font-size:10px; color:#555; text-align:center; cursor:pointer; border-top:1px solid rgba(255,255,255,0.06); }
+.popup-close:hover { color:#aaa; }
+.legend { max-width:1100px; margin:16px auto 0; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:10px; padding:12px 16px; display:flex; flex-wrap:wrap; gap:8px 20px; align-items:center; }
+.legend-title { font-size:10px; color:#555; letter-spacing:2px; text-transform:uppercase; }
+.legend-item { display:flex; align-items:center; gap:6px; }
+.legend-dot { width:13px; height:13px; border-radius:50%; flex-shrink:0; }
+.legend-label { font-size:11px; color:#bbb; }
+.legend-hint { font-size:10px; color:#444; margin-left:auto; }
+/* Template modal */
+#tpl-modal { display:none; position:fixed; inset:0; z-index:500; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); overflow-y:auto; }
+</style>
+</head>
+<body>
+<div class="header"><h1>Aanwezigheid Teams</h1></div>
+<div class="nav">
+  <button class="nav-btn" id="btn-prev">◀◀</button>
+  <button class="nav-btn" id="btn-prev1">◀</button>
+  <div class="nav-info" id="nav-info"><span style="color:#aaa">W26</span><span style="color:#444;margin:0 8px">+</span><span style="color:#aaa">W27</span></div>
+  <button class="nav-btn" id="btn-next1">▶</button>
+  <button class="nav-btn" id="btn-next">▶▶</button>
+  <button class="nav-now nav-btn" id="btn-now">Vandaag</button>
+  <button class="nav-btn" id="btn-refresh" onclick="saveState();setTimeout(()=&gt;location.reload(),300)" title="Ververs" style="font-size:14px;">↻</button>
+  <button class="nav-btn" id="btn-koppel" onclick="koppelMap()" style="font-size:10px;padding:6px 10px;width:auto;color:#ffb74d;border-color:rgba(255,183,77,0.5);background:rgba(255,183,77,0.12);font-weight:700;letter-spacing:0.5px;">📁 Koppel map</button>
+  <button class="nav-btn" onclick="downloadHTML()" title="Download als HTML" style="font-size:11px;padding:6px 10px;width:auto;color:#80cbc4;border-color:rgba(128,203,196,0.3);background:rgba(128,203,196,0.06);">⬇ Download</button>
+  <span id="save-ind" style="font-size: 11px; opacity: 0; transition: opacity 0.3s; min-width: 20px; text-align: center; color: rgb(128, 203, 196);">✓ opgeslagen</span>
+  <button class="nav-btn" id="btn-template" style="font-size:10px;padding:6px 10px;color:#60b0ff;border-color:rgba(0,150,255,0.3);background:rgba(0,100,220,0.08);width:auto;letter-spacing:1px;">★ Standaard</button>
+</div>
+
+<div class="scroll-wrap">
+  <div class="grid-layout" id="main-grid"><div class="name-col"><div class="name-spacer" style="height: 125.8px;"></div><div class="name-row alt"><div class="avatar" style="background: rgb(124, 92, 191);">W</div><span class="name-label">Wim</span></div><div class="name-row"><div class="avatar" style="background: rgb(58, 138, 130);">W</div><span class="name-label">Wouter</span></div><div class="name-row alt"><div class="avatar" style="background: rgb(196, 122, 46);">A</div><span class="name-label">Annies</span></div><div class="name-row"><div class="avatar" style="background: rgb(181, 77, 106);">B</div><span class="name-label">Bas</span></div><div class="name-row alt"><div class="avatar" style="background: rgb(138, 77, 181);">B</div><span class="name-label">Bram</span></div><div class="name-row"><div class="avatar" style="background: rgb(58, 122, 92);">I</div><span class="name-label">Ivor</span></div><div class="name-row alt"><div class="avatar" style="background: rgb(92, 122, 181);">S</div><span class="name-label">Sercan</span></div><div class="name-row"><div class="avatar" style="background: rgb(181, 77, 77);">H</div><span class="name-label self">Hans</span></div><div class="name-row alt"><div class="avatar" style="background: rgb(255, 108, 0);">M</div><span class="name-label">Marco</span></div><div class="name-row"><div class="avatar" style="background: rgb(77, 122, 58);">T</div><span class="name-label">Ted</span></div><div class="name-row alt"><div class="avatar" style="background: rgb(92, 77, 138);">F</div><span class="name-label">Fredje</span></div><div class="name-row"><div class="avatar" style="background: rgb(124, 92, 191);">D</div><span class="name-label">Dave</span></div></div><div class="divider"></div><div class="week-panel current"><div class="week-header" style="height: 26px;"><div class="week-badge current">Week 26</div><div class="week-lbl current">huidige week</div><button class="reset-btn">↺ Reset</button></div><div class="day-header" style="height: 67px;"><div class="day-hd today-col"><div class="day-hd-name today-col">MA</div><div class="day-hd-date today-col">22 jun</div><div class="today-badge">vandaag</div><div class="day-hd-count" id="cnt-2026-W26-MA" style="color:#f48fb1">7×</div></div><div class="day-hd"><div class="day-hd-name">DI</div><div class="day-hd-date">23 jun</div><div class="day-hd-count" id="cnt-2026-W26-DI" style="color:#ffb74d">4×</div></div><div class="day-hd"><div class="day-hd-name">WO</div><div class="day-hd-date">24 jun</div><div class="day-hd-count" id="cnt-2026-W26-WO" style="color:#f48fb1">7×</div></div><div class="day-hd"><div class="day-hd-name">DO</div><div class="day-hd-date">25 jun</div><div class="day-hd-count" id="cnt-2026-W26-DO" style="color:#ffb74d">6×</div></div><div class="day-hd"><div class="day-hd-name">VR</div><div class="day-hd-date">26 jun</div><div class="day-hd-count" id="cnt-2026-W26-VR" style="color:#ffb74d">5×</div></div></div><div class="person-row alt"><div class="cell-wrap"><div class="cell today-col" id="cell-2026-W26-Wim-MA" style="background: rgba(229, 57, 53, 0.12); border: 1.5px solid rgba(229, 57, 53, 0.5);"><div class="dot" style="background: rgb(229, 57, 53); box-shadow: rgba(229, 57, 53, 0.533) 0px 0px 6px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">V</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Wim-DI" style="background: rgba(229, 57, 53, 0.12); border: 1.5px solid rgba(229, 57, 53, 0.5);"><div class="dot" style="background: rgb(229, 57, 53); box-shadow: rgba(229, 57, 53, 0.533) 0px 0px 6px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">V</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Wim-WO" style="background: rgba(229, 57, 53, 0.12); border: 1.5px solid rgba(229, 57, 53, 0.5);"><div class="dot" style="background: rgb(229, 57, 53); box-shadow: rgba(229, 57, 53, 0.533) 0px 0px 6px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">V</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Wim-DO" style="background: rgba(229, 57, 53, 0.12); border: 1.5px solid rgba(229, 57, 53, 0.5);"><div class="dot" style="background: rgb(229, 57, 53); box-shadow: rgba(229, 57, 53, 0.533) 0px 0px 6px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">V</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Wim-VR" style="background: rgba(229, 57, 53, 0.12); border: 1.5px solid rgba(229, 57, 53, 0.5);"><div class="dot" style="background: rgb(229, 57, 53); box-shadow: rgba(229, 57, 53, 0.533) 0px 0px 6px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">V</span></div></div></div></div><div class="person-row"><div class="cell-wrap"><div class="cell today-col" id="cell-2026-W26-Wouter-MA" style="background: rgba(229, 57, 53, 0.12); border: 1.5px solid rgba(229, 57, 53, 0.5);"><div class="dot" style="background: rgb(229, 57, 53); box-shadow: rgba(229, 57, 53, 0.533) 0px 0px 6px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">V</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Wouter-DI" style="background: rgba(229, 57, 53, 0.12); border: 1.5px solid rgba(229, 57, 53, 0.5);"><div class="dot" style="background: rgb(229, 57, 53); box-shadow: rgba(229, 57, 53, 0.533) 0px 0px 6px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">V</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Wouter-WO" style="background: rgba(229, 57, 53, 0.12); border: 1.5px solid rgba(229, 57, 53, 0.5);"><div class="dot" style="background: rgb(229, 57, 53); box-shadow: rgba(229, 57, 53, 0.533) 0px 0px 6px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">V</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Wouter-DO" style="background: rgba(76, 175, 80, 0.133); border: 1.5px solid rgba(56, 142, 60, 0.4);"><div class="dot" style="background: rgb(76, 175, 80); box-shadow: rgba(76, 175, 80, 0.533) 0px 0px 5px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">T</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Wouter-VR" style="background: rgba(76, 175, 80, 0.133); border: 1.5px solid rgba(56, 142, 60, 0.4);"><div class="dot" style="background: rgb(76, 175, 80); box-shadow: rgba(76, 175, 80, 0.533) 0px 0px 5px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">T</span></div></div></div></div><div class="person-row alt"><div class="cell-wrap"><div class="cell today-col" id="cell-2026-W26-Annies-MA" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Annies-DI" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Annies-WO" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Annies-DO" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Annies-VR" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div></div><div class="person-row"><div class="cell-wrap"><div class="cell today-col" id="cell-2026-W26-Bas-MA" style="background: rgba(229, 57, 53, 0.12); border: 1.5px solid rgba(229, 57, 53, 0.5);"><div class="dot" style="background: rgb(229, 57, 53); box-shadow: rgba(229, 57, 53, 0.533) 0px 0px 6px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">V</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Bas-DI" style="background: rgba(76, 175, 80, 0.133); border: 1.5px solid rgba(56, 142, 60, 0.4);"><div class="dot" style="background: rgb(76, 175, 80); box-shadow: rgba(76, 175, 80, 0.533) 0px 0px 5px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">T</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Bas-WO" style="background: rgba(76, 175, 80, 0.133); border: 1.5px solid rgba(56, 142, 60, 0.4);"><div class="dot" style="background: rgb(76, 175, 80); box-shadow: rgba(76, 175, 80, 0.533) 0px 0px 5px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">T</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Bas-DO" style="background: rgba(229, 57, 53, 0.12); border: 1.5px solid rgba(229, 57, 53, 0.5);"><div class="dot" style="background: rgb(229, 57, 53); box-shadow: rgba(229, 57, 53, 0.533) 0px 0px 6px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">V</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Bas-VR" style="background: rgba(229, 57, 53, 0.12); border: 1.5px solid rgba(229, 57, 53, 0.5);"><div class="dot" style="background: rgb(229, 57, 53); box-shadow: rgba(229, 57, 53, 0.533) 0px 0px 6px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">V</span></div></div></div></div><div class="person-row alt"><div class="cell-wrap"><div class="cell today-col" id="cell-2026-W26-Bram-MA" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Bram-DI" style="background: rgba(229, 57, 53, 0.12); border: 1.5px solid rgba(229, 57, 53, 0.5);"><div class="dot" style="background: rgb(229, 57, 53); box-shadow: rgba(229, 57, 53, 0.533) 0px 0px 6px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">V</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Bram-WO" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Bram-DO" style="background: rgba(76, 175, 80, 0.133); border: 1.5px solid rgba(56, 142, 60, 0.4);"><div class="dot" style="background: rgb(76, 175, 80); box-shadow: rgba(76, 175, 80, 0.533) 0px 0px 5px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">T</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Bram-VR" style="background: rgba(76, 175, 80, 0.133); border: 1.5px solid rgba(56, 142, 60, 0.4);"><div class="dot" style="background: rgb(76, 175, 80); box-shadow: rgba(76, 175, 80, 0.533) 0px 0px 5px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">T</span></div></div></div></div><div class="person-row"><div class="cell-wrap"><div class="cell today-col" id="cell-2026-W26-Ivor-MA" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Ivor-DI" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Ivor-WO" style="background: rgba(229, 57, 53, 0.12); border: 1.5px solid rgba(229, 57, 53, 0.5);"><div class="dot" style="background: rgb(229, 57, 53); box-shadow: rgba(229, 57, 53, 0.533) 0px 0px 6px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">V</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Ivor-DO" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Ivor-VR" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div></div><div class="person-row alt"><div class="cell-wrap"><div class="cell today-col" id="cell-2026-W26-Sercan-MA" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Sercan-DI" style="background: rgba(76, 175, 80, 0.133); border: 1.5px solid rgba(56, 142, 60, 0.4);"><div class="dot" style="background: rgb(76, 175, 80); box-shadow: rgba(76, 175, 80, 0.533) 0px 0px 5px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">T</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Sercan-WO" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Sercan-DO" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Sercan-VR" style="background: rgba(229, 57, 53, 0.12); border: 1.5px solid rgba(229, 57, 53, 0.5);"><div class="dot" style="background: rgb(229, 57, 53); box-shadow: rgba(229, 57, 53, 0.533) 0px 0px 6px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">V</span></div></div></div></div><div class="person-row"><div class="cell-wrap"><div class="cell today-col" id="cell-2026-W26-Hans-MA" style="background: rgba(76, 175, 80, 0.133); border: 1.5px solid rgba(56, 142, 60, 0.4);"><div class="dot" style="background: rgb(76, 175, 80); box-shadow: rgba(76, 175, 80, 0.533) 0px 0px 5px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">T</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Hans-DI" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Hans-WO" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Hans-DO" style="background: rgba(76, 175, 80, 0.133); border: 1.5px solid rgba(56, 142, 60, 0.4);"><div class="dot" style="background: rgb(76, 175, 80); box-shadow: rgba(76, 175, 80, 0.533) 0px 0px 5px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">T</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Hans-VR" style="background: rgba(229, 57, 53, 0.12); border: 1.5px solid rgba(229, 57, 53, 0.5);"><div class="dot" style="background: rgb(229, 57, 53); box-shadow: rgba(229, 57, 53, 0.533) 0px 0px 6px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">V</span></div></div></div></div><div class="person-row alt"><div class="cell-wrap"><div class="cell today-col" id="cell-2026-W26-Marco-MA" style="background: rgba(229, 57, 53, 0.12); border: 1.5px solid rgba(229, 57, 53, 0.5);"><div class="half-indicator"><div class="half-circle-left"></div></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Marco-DI" style="background: rgba(76, 175, 80, 0.133); border: 1.5px solid rgba(56, 142, 60, 0.4);"><div class="dot" style="background: rgb(76, 175, 80); box-shadow: rgba(76, 175, 80, 0.533) 0px 0px 5px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">T</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Marco-WO" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Marco-DO" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Marco-VR" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div></div><div class="person-row"><div class="cell-wrap"><div class="cell today-col" id="cell-2026-W26-Ted-MA" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Ted-DI" style="background: rgba(76, 175, 80, 0.133); border: 1.5px solid rgba(56, 142, 60, 0.4);"><div class="dot" style="background: rgb(76, 175, 80); box-shadow: rgba(76, 175, 80, 0.533) 0px 0px 5px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">T</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Ted-WO" style="background: rgba(76, 175, 80, 0.133); border: 1.5px solid rgba(56, 142, 60, 0.4);"><div class="dot" style="background: rgb(76, 175, 80); box-shadow: rgba(76, 175, 80, 0.533) 0px 0px 5px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">T</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Ted-DO" style="background: rgba(229, 57, 53, 0.12); border: 1.5px solid rgba(229, 57, 53, 0.5);"><div class="dot" style="background: rgb(229, 57, 53); box-shadow: rgba(229, 57, 53, 0.533) 0px 0px 6px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">V</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Ted-VR" style="background: rgba(229, 57, 53, 0.12); border: 1.5px solid rgba(229, 57, 53, 0.5);"><div class="dot" style="background: rgb(229, 57, 53); box-shadow: rgba(229, 57, 53, 0.533) 0px 0px 6px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">V</span></div></div></div></div><div class="person-row alt"><div class="cell-wrap"><div class="cell today-col" id="cell-2026-W26-Fredje-MA" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Fredje-DI" style="background: rgba(76, 175, 80, 0.133); border: 1.5px solid rgba(56, 142, 60, 0.4);"><div class="dot" style="background: rgb(76, 175, 80); box-shadow: rgba(76, 175, 80, 0.533) 0px 0px 5px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">T</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Fredje-WO" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Fredje-DO" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Fredje-VR" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div></div><div class="person-row"><div class="cell-wrap"><div class="cell today-col" id="cell-2026-W26-Dave-MA" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Dave-DI" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Dave-WO" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Dave-DO" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W26-Dave-VR" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div></div><div class="today-col-overlay" style="left: 9.79999px; top: 49.4px; width: 93.275px; height: 566px;"></div></div><div class="divider"></div><div class="week-panel other"><div class="week-header" style="height: 26px;"><div class="week-badge other">Week 27</div><div class="week-lbl other">volgende week</div><button class="reset-btn">↺ Reset</button></div><div class="day-header" style="height: 67px;"><div class="day-hd"><div class="day-hd-name">MA</div><div class="day-hd-date">29 jun</div><div class="day-hd-count" id="cnt-2026-W27-MA" style="color:#f48fb1">8×</div></div><div class="day-hd"><div class="day-hd-name">DI</div><div class="day-hd-date">30 jun</div><div class="day-hd-count" id="cnt-2026-W27-DI" style="color:#ffb74d">6×</div></div><div class="day-hd"><div class="day-hd-name">WO</div><div class="day-hd-date">1 jul</div><div class="day-hd-count" id="cnt-2026-W27-WO" style="color:#f48fb1">8×</div></div><div class="day-hd"><div class="day-hd-name">DO</div><div class="day-hd-date">2 jul</div><div class="day-hd-count" id="cnt-2026-W27-DO" style="color:#f48fb1">10×</div></div><div class="day-hd"><div class="day-hd-name">VR</div><div class="day-hd-date">3 jul</div><div class="day-hd-count" id="cnt-2026-W27-VR" style="color:#f48fb1">7×</div></div></div><div class="person-row alt"><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Wim-MA" style="background: rgba(229, 57, 53, 0.12); border: 1.5px solid rgba(229, 57, 53, 0.5);"><div class="dot" style="background: rgb(229, 57, 53); box-shadow: rgba(229, 57, 53, 0.533) 0px 0px 6px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">V</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Wim-DI" style="background: rgba(229, 57, 53, 0.12); border: 1.5px solid rgba(229, 57, 53, 0.5);"><div class="dot" style="background: rgb(229, 57, 53); box-shadow: rgba(229, 57, 53, 0.533) 0px 0px 6px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">V</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Wim-WO" style="background: rgba(229, 57, 53, 0.12); border: 1.5px solid rgba(229, 57, 53, 0.5);"><div class="dot" style="background: rgb(229, 57, 53); box-shadow: rgba(229, 57, 53, 0.533) 0px 0px 6px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">V</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Wim-DO" style="background: rgba(229, 57, 53, 0.12); border: 1.5px solid rgba(229, 57, 53, 0.5);"><div class="dot" style="background: rgb(229, 57, 53); box-shadow: rgba(229, 57, 53, 0.533) 0px 0px 6px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">V</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Wim-VR" style="background: rgba(229, 57, 53, 0.12); border: 1.5px solid rgba(229, 57, 53, 0.5);"><div class="dot" style="background: rgb(229, 57, 53); box-shadow: rgba(229, 57, 53, 0.533) 0px 0px 6px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">V</span></div></div></div></div><div class="person-row"><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Wouter-MA" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Wouter-DI" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Wouter-WO" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Wouter-DO" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Wouter-VR" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div></div><div class="person-row alt"><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Annies-MA" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Annies-DI" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Annies-WO" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Annies-DO" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Annies-VR" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div></div><div class="person-row"><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Bas-MA" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Bas-DI" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Bas-WO" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Bas-DO" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Bas-VR" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div></div><div class="person-row alt"><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Bram-MA" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Bram-DI" style="background: rgba(229, 57, 53, 0.12); border: 1.5px solid rgba(229, 57, 53, 0.5);"><div class="dot" style="background: rgb(229, 57, 53); box-shadow: rgba(229, 57, 53, 0.533) 0px 0px 6px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">V</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Bram-WO" style="background: rgba(76, 175, 80, 0.133); border: 1.5px solid rgba(56, 142, 60, 0.4);"><div class="dot" style="background: rgb(76, 175, 80); box-shadow: rgba(76, 175, 80, 0.533) 0px 0px 5px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">T</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Bram-DO" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Bram-VR" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div></div><div class="person-row"><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Ivor-MA" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Ivor-DI" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Ivor-WO" style="background: rgba(229, 57, 53, 0.12); border: 1.5px solid rgba(229, 57, 53, 0.5);"><div class="dot" style="background: rgb(229, 57, 53); box-shadow: rgba(229, 57, 53, 0.533) 0px 0px 6px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">V</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Ivor-DO" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Ivor-VR" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div></div><div class="person-row alt"><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Sercan-MA" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Sercan-DI" style="background: rgba(76, 175, 80, 0.133); border: 1.5px solid rgba(56, 142, 60, 0.4);"><div class="dot" style="background: rgb(76, 175, 80); box-shadow: rgba(76, 175, 80, 0.533) 0px 0px 5px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">T</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Sercan-WO" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Sercan-DO" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Sercan-VR" style="background: rgba(229, 57, 53, 0.12); border: 1.5px solid rgba(229, 57, 53, 0.5);"><div class="dot" style="background: rgb(229, 57, 53); box-shadow: rgba(229, 57, 53, 0.533) 0px 0px 6px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">V</span></div></div></div></div><div class="person-row"><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Hans-MA" style="background: rgba(76, 175, 80, 0.133); border: 1.5px solid rgba(56, 142, 60, 0.4);"><div class="dot" style="background: rgb(76, 175, 80); box-shadow: rgba(76, 175, 80, 0.533) 0px 0px 5px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">T</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Hans-DI" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Hans-WO" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Hans-DO" style="background: rgba(76, 175, 80, 0.133); border: 1.5px solid rgba(56, 142, 60, 0.4);"><div class="dot" style="background: rgb(76, 175, 80); box-shadow: rgba(76, 175, 80, 0.533) 0px 0px 5px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">T</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Hans-VR" style="background: rgba(229, 57, 53, 0.12); border: 1.5px solid rgba(229, 57, 53, 0.5);"><div class="dot" style="background: rgb(229, 57, 53); box-shadow: rgba(229, 57, 53, 0.533) 0px 0px 6px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">V</span></div></div></div></div><div class="person-row alt"><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Marco-MA" style="background: rgba(76, 175, 80, 0.133); border: 1.5px solid rgba(56, 142, 60, 0.4);"><div class="dot" style="background: rgb(76, 175, 80); box-shadow: rgba(76, 175, 80, 0.533) 0px 0px 5px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">T</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Marco-DI" style="background: rgba(76, 175, 80, 0.133); border: 1.5px solid rgba(56, 142, 60, 0.4);"><div class="dot" style="background: rgb(76, 175, 80); box-shadow: rgba(76, 175, 80, 0.533) 0px 0px 5px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">T</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Marco-WO" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Marco-DO" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Marco-VR" style="background: rgba(229, 57, 53, 0.12); border: 1.5px solid rgba(229, 57, 53, 0.5);"><div class="half-indicator"><div class="half-circle-right"></div></div></div></div></div><div class="person-row"><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Ted-MA" style="background: rgba(229, 57, 53, 0.12); border: 1.5px solid rgba(229, 57, 53, 0.5);"><div class="dot" style="background: rgb(229, 57, 53); box-shadow: rgba(229, 57, 53, 0.533) 0px 0px 6px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">V</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Ted-DI" style="background: rgba(76, 175, 80, 0.133); border: 1.5px solid rgba(56, 142, 60, 0.4);"><div class="dot" style="background: rgb(76, 175, 80); box-shadow: rgba(76, 175, 80, 0.533) 0px 0px 5px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">T</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Ted-WO" style="background: rgba(76, 175, 80, 0.133); border: 1.5px solid rgba(56, 142, 60, 0.4);"><div class="dot" style="background: rgb(76, 175, 80); box-shadow: rgba(76, 175, 80, 0.533) 0px 0px 5px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">T</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Ted-DO" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Ted-VR" style="background: rgba(76, 175, 80, 0.133); border: 1.5px solid rgba(56, 142, 60, 0.4);"><div class="dot" style="background: rgb(76, 175, 80); box-shadow: rgba(76, 175, 80, 0.533) 0px 0px 5px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">T</span></div></div></div></div><div class="person-row alt"><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Fredje-MA" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Fredje-DI" style="background: rgba(76, 175, 80, 0.133); border: 1.5px solid rgba(56, 142, 60, 0.4);"><div class="dot" style="background: rgb(76, 175, 80); box-shadow: rgba(76, 175, 80, 0.533) 0px 0px 5px; display: flex; align-items: center; justify-content: center;"><span style="font-size: 8px; font-weight: 700; color: rgba(0, 0, 0, 0.45); line-height: 1;">T</span></div></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Fredje-WO" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Fredje-DO" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Fredje-VR" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div></div><div class="person-row"><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Dave-MA" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Dave-DI" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Dave-WO" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Dave-DO" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div><div class="cell-wrap"><div class="cell" id="cell-2026-W27-Dave-VR" style="background: rgba(255, 255, 255, 0.22); border: 1.5px solid rgba(255, 255, 255, 0.3);"><span style="font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.5px;">K</span></div></div></div></div></div>
+  <div class="legend" id="legend"><span class="legend-title">Legenda</span><div class="legend-item"><div style="width:34px;height:20px;border-radius:5px;background:rgba(255,255,255,0.22);border:1.5px solid rgba(255,255,255,0.30);display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.35)">K</span></div><span class="legend-label">Kantoor</span></div><div class="legend-item"><div class="legend-dot" style="background:#4caf50;box-shadow:0 0 5px #4caf5066"></div><span class="legend-label">Thuis</span></div><div class="legend-item"><div class="legend-dot" style="background:#ffb74d;box-shadow:0 0 5px #ffb74d66"></div><span class="legend-label">Gedeeltelijk afwezig</span></div><div class="legend-item"><div class="legend-dot" style="background:#e53935;box-shadow:0 0 5px #e5393566"></div><span class="legend-label">Vrije dag</span></div><div class="legend-item"><div style="width:13px;height:13px;border-radius:50%;border:1.5px solid #e53935;background:linear-gradient(to right,#e53935 50%,transparent 50%);flex-shrink:0"></div><span class="legend-label">Voormiddag vrij</span></div><div class="legend-item"><div style="width:13px;height:13px;border-radius:50%;border:1.5px solid #e53935;background:linear-gradient(to left,#e53935 50%,transparent 50%);flex-shrink:0"></div><span class="legend-label">Namiddag vrij</span></div><div class="legend-item"><div class="legend-dot" style="background:#ce93d8;box-shadow:0 0 5px #ce93d866"></div><span class="legend-label">Extern</span></div><span class="legend-hint">klik cel → kies status(sen)</span></div>
+</div>
+
+<!-- Standaard modal -->
+<div id="tpl-modal" style="display: none;">
+  <div style="max-width:600px;margin:40px auto 40px;background:#111827;border:1px solid rgba(0,150,255,0.35);border-radius:16px;padding:24px 20px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div>
+        <span style="font-size:18px;font-weight:800;color:#60b0ff;letter-spacing:1px;">★ Standaard week</span>
+        <div style="font-size:10px;color:#555;letter-spacing:2px;text-transform:uppercase;margin-top:3px;">Wijzigingen worden direct doorgevoerd in alle komende weken</div>
+      </div>
+      <button id="tpl-close" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#aaa;border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer;font-family:inherit;">✕ Sluiten</button>
+    </div>
+    <div id="tpl-grid"><div style="display: grid; grid-template-columns: 110px repeat(5, 1fr); gap: 4px; margin-bottom: 8px;"><div></div><div style="text-align: center; font-size: 12px; font-weight: 800; color: rgb(255, 255, 255); letter-spacing: 1px; padding: 6px 0px;">MA</div><div style="text-align: center; font-size: 12px; font-weight: 800; color: rgb(255, 255, 255); letter-spacing: 1px; padding: 6px 0px;">DI</div><div style="text-align: center; font-size: 12px; font-weight: 800; color: rgb(255, 255, 255); letter-spacing: 1px; padding: 6px 0px;">WO</div><div style="text-align: center; font-size: 12px; font-weight: 800; color: rgb(255, 255, 255); letter-spacing: 1px; padding: 6px 0px;">DO</div><div style="text-align: center; font-size: 12px; font-weight: 800; color: rgb(255, 255, 255); letter-spacing: 1px; padding: 6px 0px;">VR</div></div><div style="display: grid; grid-template-columns: 110px repeat(5, 1fr); gap: 4px; margin-bottom: 4px; padding: 2px 4px; border-radius: 6px; background: rgba(255, 255, 255, 0.016);"><div style="display: flex; align-items: center; gap: 7px;"><div style="width:24px;height:24px;border-radius:50%;background:#7c5cbf;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">W</div><span style="font-size:12px;color:#d0d0d0;font-weight:400">Wim</span></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Wim-MA" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Wim-DI" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Wim-WO" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Wim-DO" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Wim-VR" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div></div><div style="display: grid; grid-template-columns: 110px repeat(5, 1fr); gap: 4px; margin-bottom: 4px; padding: 2px 4px; border-radius: 6px; background: transparent;"><div style="display: flex; align-items: center; gap: 7px;"><div style="width:24px;height:24px;border-radius:50%;background:#3a8a82;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">W</div><span style="font-size:12px;color:#d0d0d0;font-weight:400">Wouter</span></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Wouter-MA" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Wouter-DI" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Wouter-WO" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Wouter-DO" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Wouter-VR" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div></div><div style="display: grid; grid-template-columns: 110px repeat(5, 1fr); gap: 4px; margin-bottom: 4px; padding: 2px 4px; border-radius: 6px; background: rgba(255, 255, 255, 0.016);"><div style="display: flex; align-items: center; gap: 7px;"><div style="width:24px;height:24px;border-radius:50%;background:#c47a2e;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">A</div><span style="font-size:12px;color:#d0d0d0;font-weight:400">Annies</span></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Annies-MA" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Annies-DI" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Annies-WO" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Annies-DO" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Annies-VR" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div></div><div style="display: grid; grid-template-columns: 110px repeat(5, 1fr); gap: 4px; margin-bottom: 4px; padding: 2px 4px; border-radius: 6px; background: transparent;"><div style="display: flex; align-items: center; gap: 7px;"><div style="width:24px;height:24px;border-radius:50%;background:#b54d6a;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">B</div><span style="font-size:12px;color:#d0d0d0;font-weight:400">Bas</span></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Bas-MA" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Bas-DI" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Bas-WO" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Bas-DO" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Bas-VR" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div></div><div style="display: grid; grid-template-columns: 110px repeat(5, 1fr); gap: 4px; margin-bottom: 4px; padding: 2px 4px; border-radius: 6px; background: rgba(255, 255, 255, 0.016);"><div style="display: flex; align-items: center; gap: 7px;"><div style="width:24px;height:24px;border-radius:50%;background:#8a4db5;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">F</div><span style="font-size:12px;color:#d0d0d0;font-weight:400">Frederique</span></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Frederique-MA" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Frederique-DI" style="background: rgba(128, 203, 196, 0.133); border: 1.5px solid rgba(77, 182, 172, 0.4);"><div class="dot" style="background: rgb(128, 203, 196); box-shadow: rgba(128, 203, 196, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Frederique-WO" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Frederique-DO" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Frederique-VR" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div></div><div style="display: grid; grid-template-columns: 110px repeat(5, 1fr); gap: 4px; margin-bottom: 4px; padding: 2px 4px; border-radius: 6px; background: transparent;"><div style="display: flex; align-items: center; gap: 7px;"><div style="width:24px;height:24px;border-radius:50%;background:#3a7a5c;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">B</div><span style="font-size:12px;color:#d0d0d0;font-weight:400">Bram</span></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Bram-MA" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Bram-DI" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Bram-WO" style="background: rgba(128, 203, 196, 0.133); border: 1.5px solid rgba(77, 182, 172, 0.4);"><div class="dot" style="background: rgb(128, 203, 196); box-shadow: rgba(128, 203, 196, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Bram-DO" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Bram-VR" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div></div><div style="display: grid; grid-template-columns: 110px repeat(5, 1fr); gap: 4px; margin-bottom: 4px; padding: 2px 4px; border-radius: 6px; background: rgba(255, 255, 255, 0.016);"><div style="display: flex; align-items: center; gap: 7px;"><div style="width:24px;height:24px;border-radius:50%;background:#5c7ab5;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">I</div><span style="font-size:12px;color:#d0d0d0;font-weight:400">Ivor</span></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Ivor-MA" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Ivor-DI" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Ivor-WO" style="background: rgba(229, 57, 53, 0.12); border: 1.5px solid rgba(229, 57, 53, 0.5);"><div class="dot" style="background: rgb(229, 57, 53); box-shadow: rgba(229, 57, 53, 0.533) 0px 0px 6px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Ivor-DO" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Ivor-VR" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div></div><div style="display: grid; grid-template-columns: 110px repeat(5, 1fr); gap: 4px; margin-bottom: 4px; padding: 2px 4px; border-radius: 6px; background: transparent;"><div style="display: flex; align-items: center; gap: 7px;"><div style="width:24px;height:24px;border-radius:50%;background:#b54d4d;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">S</div><span style="font-size:12px;color:#d0d0d0;font-weight:400">Sercan</span></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Sercan-MA" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Sercan-DI" style="background: rgba(128, 203, 196, 0.133); border: 1.5px solid rgba(77, 182, 172, 0.4);"><div class="dot" style="background: rgb(128, 203, 196); box-shadow: rgba(128, 203, 196, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Sercan-WO" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Sercan-DO" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Sercan-VR" style="background: rgba(229, 57, 53, 0.12); border: 1.5px solid rgba(229, 57, 53, 0.5);"><div class="dot" style="background: rgb(229, 57, 53); box-shadow: rgba(229, 57, 53, 0.533) 0px 0px 6px;"></div></div></div></div><div style="display: grid; grid-template-columns: 110px repeat(5, 1fr); gap: 4px; margin-bottom: 4px; padding: 2px 4px; border-radius: 6px; background: rgba(255, 255, 255, 0.016);"><div style="display: flex; align-items: center; gap: 7px;"><div style="width:24px;height:24px;border-radius:50%;background:#FF6C00;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">H</div><span style="font-size:12px;color:#FF6C00;font-weight:700">Hans</span></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Hans-MA" style="background: rgba(128, 203, 196, 0.133); border: 1.5px solid rgba(77, 182, 172, 0.4);"><div class="dot" style="background: rgb(128, 203, 196); box-shadow: rgba(128, 203, 196, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Hans-DI" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Hans-WO" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Hans-DO" style="background: rgba(128, 203, 196, 0.133); border: 1.5px solid rgba(77, 182, 172, 0.4);"><div class="dot" style="background: rgb(128, 203, 196); box-shadow: rgba(128, 203, 196, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Hans-VR" style="background: rgba(229, 57, 53, 0.12); border: 1.5px solid rgba(229, 57, 53, 0.5);"><div class="half-indicator"><div class="half-circle-right"></div><div class="dot" style="background: rgb(128, 203, 196); box-shadow: rgba(128, 203, 196, 0.533) 0px 0px 5px;"></div></div></div></div></div><div style="display: grid; grid-template-columns: 110px repeat(5, 1fr); gap: 4px; margin-bottom: 4px; padding: 2px 4px; border-radius: 6px; background: transparent;"><div style="display: flex; align-items: center; gap: 7px;"><div style="width:24px;height:24px;border-radius:50%;background:#4d7a3a;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">M</div><span style="font-size:12px;color:#d0d0d0;font-weight:400">Marco</span></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Marco-MA" style="background: rgba(128, 203, 196, 0.133); border: 1.5px solid rgba(77, 182, 172, 0.4);"><div class="dot" style="background: rgb(128, 203, 196); box-shadow: rgba(128, 203, 196, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Marco-DI" style="background: rgba(128, 203, 196, 0.133); border: 1.5px solid rgba(77, 182, 172, 0.4);"><div class="dot" style="background: rgb(128, 203, 196); box-shadow: rgba(128, 203, 196, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Marco-WO" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Marco-DO" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Marco-VR" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div></div><div style="display: grid; grid-template-columns: 110px repeat(5, 1fr); gap: 4px; margin-bottom: 4px; padding: 2px 4px; border-radius: 6px; background: rgba(255, 255, 255, 0.016);"><div style="display: flex; align-items: center; gap: 7px;"><div style="width:24px;height:24px;border-radius:50%;background:#5c4d8a;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">D</div><span style="font-size:12px;color:#d0d0d0;font-weight:400">Dave</span></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Dave-MA" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Dave-DI" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Dave-WO" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Dave-DO" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div><div class="cell-wrap"><div class="cell" id="cell-TPL-Dave-VR" style="background: rgba(179, 157, 219, 0.133); border: 1.5px solid rgba(149, 117, 205, 0.4);"><div class="dot" style="background: rgb(179, 157, 219); box-shadow: rgba(179, 157, 219, 0.533) 0px 0px 5px;"></div></div></div></div></div>
+  </div>
+</div>
+
+<script id="data-store" type="application/json">{"store":{"2026-W22":{"Wim":{"MA":["vrij"],"DI":["vrij"],"WO":["vrij"],"DO":["vrij"],"VR":["vrij"]},"Wouter":{"MA":["vrij"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Annies":{"MA":["vrij"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Bas":{"MA":["vrij"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Bram":{"MA":["vrij"],"DI":["vrij"],"WO":["vrij"],"DO":["vrij"],"VR":["vrij"]},"Ivor":{"MA":["vrij"],"DI":["kantoor"],"WO":["vrij"],"DO":["kantoor"],"VR":["kantoor"]},"Sercan":{"MA":["vrij"],"DI":["thuis"],"WO":["thuis"],"DO":["kantoor"],"VR":["vrij"]},"Hans":{"MA":["vrij"],"DI":["kantoor"],"WO":["kantoor"],"DO":["thuis"],"VR":["thuis","nm_vrij"]},"Marco":{"MA":["vrij"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Dave":{"MA":["vrij"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Fredje":{"MA":["vrij"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Ted":{"MA":["kantoor"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]}},"2026-W24":{"Wim":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Wouter":{"MA":["kantoor"],"DI":["extern"],"WO":["kantoor"],"DO":["thuis"],"VR":["kantoor"]},"Annies":{"MA":["kantoor"],"DI":["extern"],"WO":["kantoor","deel"],"DO":["kantoor","vm_vrij"],"VR":["kantoor"]},"Bas":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Bram":{"MA":["kantoor"],"DI":["vrij"],"WO":["thuis"],"DO":["kantoor"],"VR":["kantoor"]},"Ivor":{"MA":["kantoor"],"DI":["vrij"],"WO":["vrij"],"DO":["kantoor"],"VR":["kantoor"]},"Sercan":{"MA":["kantoor"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["vrij"]},"Hans":{"MA":["thuis"],"DI":["kantoor"],"WO":["kantoor"],"DO":["thuis"],"VR":["thuis","nm_vrij"]},"Marco":{"MA":["thuis"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["vrij"]},"Dave":{"MA":["kantoor"],"DI":["extern"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Fredje":{"MA":["kantoor"],"DI":["extern"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Ted":{"MA":["kantoor"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]}},"2026-W25":{"Wim":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Wouter":{"MA":["vrij"],"DI":["vrij"],"WO":["vrij"],"DO":["vrij"],"VR":["vrij"]},"Annies":{"MA":["kantoor"],"DI":["kantoor","deel"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Bas":{"MA":["vrij"],"DI":["vrij"],"WO":["vrij"],"DO":["vrij"],"VR":["vrij"]},"Bram":{"MA":["kantoor"],"DI":["vrij"],"WO":["thuis"],"DO":["kantoor"],"VR":["kantoor"]},"Ivor":{"MA":["kantoor"],"DI":["kantoor"],"WO":["vrij"],"DO":["kantoor"],"VR":["kantoor"]},"Sercan":{"MA":["kantoor"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["vrij"]},"Hans":{"MA":["thuis"],"DI":["kantoor"],"WO":["kantoor"],"DO":["thuis"],"VR":["vrij"]},"Marco":{"MA":["thuis"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["thuis"]},"Dave":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Fredje":{"MA":["kantoor"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Ted":{"MA":["kantoor"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]}},"2026-W26":{"Wim":{"MA":["vrij"],"DI":["vrij"],"WO":["vrij"],"DO":["vrij"],"VR":["vrij"]},"Wouter":{"MA":["vrij"],"DI":["vrij"],"WO":["vrij"],"DO":["thuis"],"VR":["thuis"]},"Annies":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Bas":{"MA":["vrij"],"DI":["thuis"],"WO":["thuis"],"DO":["vrij"],"VR":["vrij"]},"Bram":{"MA":["kantoor"],"DI":["vrij"],"WO":["kantoor"],"DO":["thuis"],"VR":["thuis"]},"Ivor":{"MA":["kantoor"],"DI":["kantoor"],"WO":["vrij"],"DO":["kantoor"],"VR":["kantoor"]},"Sercan":{"MA":["kantoor"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["vrij"]},"Hans":{"MA":["thuis"],"DI":["kantoor"],"WO":["kantoor"],"DO":["thuis"],"VR":["vrij"]},"Marco":{"MA":["vm_vrij"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Dave":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Fredje":{"MA":["kantoor"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Ted":{"MA":["kantoor"],"DI":["thuis"],"WO":["thuis"],"DO":["vrij"],"VR":["vrij"]}},"2026-W27":{"Wim":{"MA":["vrij"],"DI":["vrij"],"WO":["vrij"],"DO":["vrij"],"VR":["vrij"]},"Wouter":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Annies":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Bas":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Bram":{"MA":["kantoor"],"DI":["vrij"],"WO":["thuis"],"DO":["kantoor"],"VR":["kantoor"]},"Ivor":{"MA":["kantoor"],"DI":["kantoor"],"WO":["vrij"],"DO":["kantoor"],"VR":["kantoor"]},"Sercan":{"MA":["kantoor"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["vrij"]},"Hans":{"MA":["thuis"],"DI":["kantoor"],"WO":["kantoor"],"DO":["thuis"],"VR":["vrij"]},"Marco":{"MA":["thuis"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["nm_vrij"]},"Ted":{"MA":["vrij"],"DI":["thuis"],"WO":["thuis"],"DO":["kantoor"],"VR":["thuis"]},"Fredje":{"MA":["kantoor"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Dave":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]}},"2026-W28":{"Wim":{"MA":["vrij"],"DI":["vrij"],"WO":["vrij"],"DO":["vrij"],"VR":["vrij"]},"Wouter":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Annies":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Bas":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Bram":{"MA":["kantoor"],"DI":["vrij"],"WO":["thuis"],"DO":["kantoor"],"VR":["kantoor"]},"Ivor":{"MA":["kantoor"],"DI":["kantoor"],"WO":["vrij"],"DO":["kantoor"],"VR":["kantoor"]},"Sercan":{"MA":["kantoor"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["vrij"]},"Hans":{"MA":["thuis"],"DI":["kantoor"],"WO":["kantoor"],"DO":["thuis"],"VR":[]},"Marco":{"MA":["thuis"],"DI":["thuis"],"WO":["deel"],"DO":["kantoor"],"VR":["thuis"]},"Ted":{"MA":["kantoor"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Fredje":{"MA":["kantoor"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Dave":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]}},"2026-W29":{"Wim":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Wouter":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Annies":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Bas":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Bram":{"MA":["kantoor"],"DI":["vrij"],"WO":["thuis"],"DO":["kantoor"],"VR":["kantoor"]},"Ivor":{"MA":["kantoor"],"DI":["kantoor"],"WO":["vrij"],"DO":["kantoor"],"VR":["kantoor"]},"Sercan":{"MA":["kantoor"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["vrij"]},"Hans":{"MA":["thuis"],"DI":["kantoor"],"WO":["kantoor"],"DO":["thuis"],"VR":["vrij"]},"Marco":{"MA":["thuis"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Ted":{"MA":["kantoor"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Fredje":{"MA":["kantoor"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Dave":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]}},"2026-W30":{"Wim":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Wouter":{"MA":["vrij"],"DI":["vrij"],"WO":["vrij"],"DO":["vrij"],"VR":["vrij"]},"Annies":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Bas":{"MA":["vrij"],"DI":["vrij"],"WO":["vrij"],"DO":["vrij"],"VR":["vrij"]},"Bram":{"MA":["kantoor"],"DI":["vrij"],"WO":["thuis"],"DO":["kantoor"],"VR":["kantoor"]},"Ivor":{"MA":["kantoor"],"DI":["kantoor"],"WO":["vrij"],"DO":["kantoor"],"VR":["kantoor"]},"Sercan":{"MA":["kantoor"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["vrij"]},"Hans":{"MA":["thuis"],"DI":["kantoor"],"WO":["kantoor"],"DO":["thuis"],"VR":["vrij"]},"Marco":{"MA":["thuis"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Ted":{"MA":["kantoor"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Fredje":{"MA":["kantoor"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Dave":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]}},"2026-W31":{"Wim":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Wouter":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Annies":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Bas":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Bram":{"MA":["kantoor"],"DI":["vrij"],"WO":["thuis"],"DO":["kantoor"],"VR":["kantoor"]},"Ivor":{"MA":["kantoor"],"DI":["kantoor"],"WO":["vrij"],"DO":["kantoor"],"VR":["kantoor"]},"Sercan":{"MA":["kantoor"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["vrij"]},"Hans":{"MA":["thuis"],"DI":["kantoor"],"WO":["kantoor"],"DO":["thuis"],"VR":["thuis","nm_vrij"]},"Marco":{"MA":["thuis"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Ted":{"MA":["kantoor"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Fredje":{"MA":["kantoor"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Dave":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]}}},"template":{"Wim":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Wouter":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Annies":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Bas":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Frederique":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Bram":{"MA":["kantoor"],"DI":["vrij"],"WO":["thuis"],"DO":["kantoor"],"VR":["kantoor"]},"Ivor":{"MA":["kantoor"],"DI":["kantoor"],"WO":["vrij"],"DO":["kantoor"],"VR":["kantoor"]},"Sercan":{"MA":["kantoor"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["vrij"]},"Hans":{"MA":["thuis"],"DI":["kantoor"],"WO":["kantoor"],"DO":["thuis"],"VR":["thuis","nm_vrij"]},"Marco":{"MA":["thuis"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Dave":{"MA":["kantoor"],"DI":["kantoor"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Fredje":{"MA":["kantoor"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]},"Ted":{"MA":["kantoor"],"DI":["thuis"],"WO":["kantoor"],"DO":["kantoor"],"VR":["kantoor"]}},"manuallyEdited":{"2026-W22":["Wim-MA","Wouter-MA","Annies-MA","Bas-MA","Bram-MA","Ivor-MA","Sercan-MA","Hans-MA","Marco-MA","Dave-MA","Wim-DI","Bram-DI","Wim-WO","Bram-WO","Wim-DO","Bram-DO","Wim-VR","Bram-VR","Wouter-DI","Sercan-DI","Sercan-WO","Marco-DI","Dave-DI","Fredje-MA","Fredje-DI"],"2026-W25":["Bas-MA","Bas-DI","Bas-WO","Bas-DO","Bas-VR","Wouter-MA","Wouter-DI","Wouter-WO","Wouter-DO","Wouter-VR","Hans-DI","Annies-DI","Hans-VR","Marco-VR"],"2026-W26":["Bas-MA","Bas-DI","Bas-WO","Bas-DO","Bas-VR","Wim-MA","Wim-DI","Wim-WO","Wim-DO","Wim-VR","Wouter-MA","Wouter-DI","Wouter-WO","Wouter-DO","Wouter-VR","Marco-MA","Hans-VR","Fredje-DI","Ted-WO","Ted-DO","Ted-VR","Bram-VR","Bram-WO","Bram-DO"],"2026-W24":["Wouter-DI","Hans-DI","Annies-DI","Fredje-DI","Ivor-DI","Dave-DI","Marco-VR","Annies-WO","Wouter-DO","Annies-DO"],"2026-W27":["Wim-MA","Wim-DI","Wim-WO","Wim-DO","Wim-VR","Marco-VR","Hans-VR","Ted-MA","Ted-WO","Ted-VR"],"2026-W28":["Wim-MA","Wim-DI","Wim-WO","Wim-DO","Wim-VR","Marco-VR","Marco-WO","Hans-VR"],"2026-W30":["Wouter-MA","Wouter-DI","Wouter-WO","Wouter-DO","Wouter-VR","Bas-MA","Bas-DI","Bas-WO","Bas-DO","Bas-VR","Hans-VR"],"2026-W29":["Hans-VR"]},"team":["Wim","Wouter","Annies","Bas","Bram","Ivor","Sercan","Hans","Marco","Ted","Fredje","Dave"]}</script>
+
+<script>
+let TEAM    = ["Wim","Wouter","Annies","Bas","Frederique","Bram","Ivor","Sercan","Hans","Marco","Dave"];
+const DAYS    = ["MA","DI","WO","DO","VR"];
+const DAY_LABELS = {MA:"Maandag",DI:"Dinsdag",WO:"Woensdag",DO:"Donderdag",VR:"Vrijdag"};
+const AVATARS = ["#7c5cbf","#3a8a82","#c47a2e","#b54d6a","#8a4db5","#3a7a5c","#5c7ab5","#b54d4d","#FF6C00","#4d7a3a","#5c4d8a"];
+
+const STATUSES = [
+  { key:"kantoor", label:"Kantoor",              color:"#66bb6a", border:"#43a047" },
+  { key:"thuis",   label:"Thuis",               color:"#4caf50", border:"#388e3c" },
+  { key:"deel",    label:"Gedeeltelijk afwezig", color:"#ffb74d", border:"#ffa726" },
+  { key:"vrij",    label:"Vrije dag",            color:"#e53935", border:"#e53935" },
+  { key:"vm_vrij", label:"Voormiddag vrij",      color:"#e53935", border:"#e53935" },
+  { key:"nm_vrij", label:"Namiddag vrij",        color:"#e53935", border:"#e53935" },
+  { key:"extern",  label:"Extern",              color:"#ce93d8", border:"#ab47bc" },
+];
+const STATUS_MAP = Object.fromEntries(STATUSES.map(s=>[s.key,s]));
+
+// ── Date helpers ─────────────────────────────────────────────────
+const today = new Date(); today.setHours(0,0,0,0);
+function mondayOf(d){ const x=new Date(d); x.setHours(0,0,0,0); const day=x.getDay()||7; x.setDate(x.getDate()-(day-1)); return x; }
+function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
+function addWeeks(d,n){ return addDays(d,n*7); }
+function isSameDay(a,b){ return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate(); }
+function getWeekNumber(date){ const d=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate())); const dn=d.getUTCDay()||7; d.setUTCDate(d.getUTCDate()+4-dn); const y1=new Date(Date.UTC(d.getUTCFullYear(),0,1)); return Math.ceil((((d-y1)/86400000)+1)/7); }
+function fmtDate(d){ return d.toLocaleDateString("nl-NL",{day:"numeric",month:"short"}); }
+
+// ── Persistentie ────────────────────────────────────────────────
+const DATA_FILE = "teamplanning-data.json";
+const LS_KEY    = "teamplanning_ict_v2";
+let dirHandle   = null;
+
+function serializeState(){
+  const me={};
+  Object.keys(manuallyEdited).forEach(k=>{ me[k]=[...manuallyEdited[k]]; });
+  return {store, template, manuallyEdited:me, team:TEAM};
+}
+function applyState(data){
+  if(data.team) TEAM = data.team.filter(p => p !== "__divider__");
+  if(data.store) Object.keys(data.store).forEach(k=>{ store[k]=data.store[k]; });
+  if(data.template){
+    // Voeg ontbrekende personen toe aan template object
+    Object.keys(data.template).forEach(p=>{
+      if(!template[p]){ template[p]={}; DAYS.forEach(d=>{ template[p][d]=[]; }); }
+      Object.keys(data.template[p]).forEach(d=>{ template[p][d]=data.template[p][d]; });
+    });
+  }
+  if(data.manuallyEdited) Object.keys(data.manuallyEdited).forEach(k=>{ manuallyEdited[k]=new Set(data.manuallyEdited[k]); });
+}
+
+// IndexedDB
+function openIDB(){
+  return new Promise((res,rej)=>{ const r=indexedDB.open("teamplanning_v3",1); r.onupgradeneeded=e=>e.target.result.createObjectStore("h"); r.onsuccess=e=>res(e.target.result); r.onerror=rej; });
+}
+async function idbGet(k){ try{ const db=await openIDB(); return await new Promise((res,rej)=>{ const r=db.transaction("h").objectStore("h").get(k); r.onsuccess=()=>res(r.result); r.onerror=rej; }); }catch(e){ return null; } }
+async function idbPut(k,v){ try{ const db=await openIDB(); await new Promise((res,rej)=>{ const tx=db.transaction("h","readwrite"); tx.objectStore("h").put(v,k); tx.oncomplete=res; tx.onerror=rej; }); }catch(e){} }
+
+// localStorage als snelle backup
+function saveLocal(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(serializeState())); }catch(e){} }
+function loadLocal(){ try{ const r=localStorage.getItem(LS_KEY); if(!r) return false; applyState(JSON.parse(r)); return true; }catch(e){ return false; } }
+
+// Schrijf data.json naar de map
+async function saveToDir(){
+  if(!dirHandle) return;
+  try{
+    const fh = await dirHandle.getFileHandle(DATA_FILE, {create:true});
+    const w  = await fh.createWritable();
+    await w.write(JSON.stringify(serializeState()));
+    await w.close();
+    showSaveStatus("ok");
+  }catch(e){ console.warn("Wegschrijven mislukt:", e); showSaveStatus("error"); }
+}
+
+// Lees data.json uit de map
+async function loadFromDir(){
+  if(!dirHandle) return false;
+  try{
+    const fh   = await dirHandle.getFileHandle(DATA_FILE);
+    const file = await fh.getFile();
+    const text = await file.text();
+    applyState(JSON.parse(text));
+    return true;
+  }catch(e){ return false; }
+}
+
+// Alles opslaan
+function saveState(){
+  saveLocal();
+  saveToDir();
+}
+
+// Map koppelen (eenmalig)
+async function koppelMap(){
+  if(!window.showDirectoryPicker){ downloadJSON(); return; }
+  try{
+    dirHandle = await window.showDirectoryPicker({mode:"readwrite"});
+    await idbPut("dir", dirHandle);
+    hideBanner();
+    await saveToDir();
+  }catch(e){ if(e.name!=="AbortError") console.warn(e); }
+}
+
+// Herstel map bij paginalading
+async function restoreMap(){
+  try{
+    const dh = await idbGet("dir");
+    if(!dh) return;
+    const perm = await dh.queryPermission({mode:"readwrite"});
+    if(perm==="granted"){
+      dirHandle=dh;
+      // Laad data.json — staat heeft prioriteit, geen template propagatie
+      const loaded = await loadFromDir();
+      if(loaded) renderAndSync();
+    } else {
+      dirHandle=dh;
+      showBanner();
+    }
+  }catch(e){}
+}
+
+// Banner voor toestemmingsherstel na refresh
+function showBanner(){
+  if(document.getElementById("perm-banner")) return;
+  const b=document.createElement("div"); b.id="perm-banner";
+  b.style.cssText="position:fixed;top:0;left:0;right:0;z-index:999;background:#FF6C00;color:#fff;text-align:center;padding:10px 16px;font-family:Courier New,monospace;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:0.5px;";
+  b.textContent="⚠ Klik hier om opslaan te hervatten (eenmalige toestemming vereist)";
+  b.onclick=async()=>{
+    try{
+      const perm=await dirHandle.requestPermission({mode:"readwrite"});
+      if(perm==="granted"){
+        hideBanner();
+        await loadFromDir();
+        renderAndSync();
+        await saveToDir();
+      }
+    }catch(e){ await koppelMap(); }
+  };
+  document.body.prepend(b);
+}
+function hideBanner(){ const b=document.getElementById("perm-banner"); if(b) b.remove(); }
+
+// Download JSON als fallback
+function downloadJSON(){
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(serializeState())],{type:"application/json"}));
+  a.download=DATA_FILE; a.click();
+}
+
+function downloadHTML(){
+  document.getElementById("data-store").textContent = JSON.stringify(serializeState());
+  const html = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([html],{type:"text/html"})); a.download="TeamPlanning-ICT.html"; a.click();
+}
+function showSaveStatus(state){
+  const ind=document.getElementById("save-ind"); if(!ind) return;
+  ind.textContent=state==="ok"?"✓ opgeslagen":"✗ mislukt";
+  ind.style.color=state==="ok"?"#80cbc4":"#f48fb1";
+  ind.style.opacity="1"; ind.style.fontSize="11px";
+  clearTimeout(ind._t);
+  ind._t=setTimeout(()=>{ ind.style.opacity="0"; },2500);
+}
+
+// ── Template ─────────────────────────────────────────────────────
+const template = {};
+TEAM.forEach(p=>{ template[p]={}; DAYS.forEach(d=>{ template[p][d]=[]; }); });
+
+["Wim","Wouter","Annies","Bas","Frederique"].forEach(p=>{ DAYS.forEach(d=>{ template[p][d]=["kantoor"]; }); });
+// Bram: WO thuis, rest kantoor
+template["Bram"]["MA"]=["kantoor"]; template["Bram"]["DI"]=["vrij"]; template["Bram"]["WO"]=["thuis"]; template["Bram"]["DO"]=["kantoor"]; template["Bram"]["VR"]=["kantoor"];
+// Ivor: WO vrij, rest kantoor
+template["Ivor"]["MA"]=["kantoor"]; template["Ivor"]["DI"]=["kantoor"]; template["Ivor"]["WO"]=["vrij"]; template["Ivor"]["DO"]=["kantoor"]; template["Ivor"]["VR"]=["kantoor"];
+// Sercan: DI thuis, VR vrij, rest kantoor
+template["Sercan"]["MA"]=["kantoor"]; template["Sercan"]["DI"]=["thuis"]; template["Sercan"]["WO"]=["kantoor"]; template["Sercan"]["DO"]=["kantoor"]; template["Sercan"]["VR"]=["vrij"];
+// Hans: MA+DO thuis, DI+WO kantoor, VR voormiddag thuis + namiddag vrij
+template["Hans"]["MA"]=["thuis"]; template["Hans"]["DI"]=["kantoor"]; template["Hans"]["WO"]=["kantoor"]; template["Hans"]["DO"]=["thuis"]; template["Hans"]["VR"]=["thuis","nm_vrij"];
+// Marco: MA+DI thuis, rest kantoor
+template["Marco"]["MA"]=["thuis"]; template["Marco"]["DI"]=["thuis"]; template["Marco"]["WO"]=["kantoor"]; template["Marco"]["DO"]=["kantoor"]; template["Marco"]["VR"]=["kantoor"];
+// Dave: altijd kantoor
+DAYS.forEach(d=>{ template["Dave"][d]=["kantoor"]; });
+
+function cloneTemplate(){ const g={}; TEAM.forEach(p=>{ if(!template[p]) template[p]={}; g[p]={}; DAYS.forEach(d=>{ g[p][d]=[...(template[p][d]||[])]; }); }); return g; }
+
+// ── Data store ───────────────────────────────────────────────────
+const store = {};
+const manuallyEdited = {};
+
+function weekKey(monday){ return `${monday.getFullYear()}-W${String(getWeekNumber(monday)).padStart(2,"0")}`; }
+function weekMondayFromKey(k){ const [yr,wPart]=k.split("-W"); const wk=parseInt(wPart); const jan1=new Date(parseInt(yr),0,1); const j=jan1.getDay()||7; const m=new Date(jan1); m.setDate(jan1.getDate()+(wk-1)*7-(j-1)); return m; }
+
+function getData(monday){
+  const k=weekKey(monday);
+  if(!store[k]) store[k]=cloneTemplate();
+  // Zorg dat alle huidige TEAM-leden data hebben
+  TEAM.forEach(p=>{
+    if(!store[k][p]){
+      if(!template[p]) template[p]={};
+      store[k][p]={};
+      DAYS.forEach(d=>{ store[k][p][d]=[...(template[p][d]||[])]; });
+    }
+  });
+  return store[k];
+}
+
+function pushTemplateCell(person,day){
+  const newVal=[...(template[person][day]||[])];
+  const thisMonday=mondayOf(today);
+  Object.keys(store).forEach(k=>{
+    const wkMonday=weekMondayFromKey(k);
+    const isFuture=wkMonday>thisMonday;
+    const edited=manuallyEdited[k];
+    if(!edited||!edited.has(person+"-"+day)){
+      if(!store[k][person]) store[k][person]={};
+      store[k][person][day]=[...newVal];
+    }
+  });
+}
+
+function toggleStatus(monday,person,day,key,isTemplate){
+  if(isTemplate){
+    const cur=template[person][day];
+    template[person][day]=cur.includes(key)?cur.filter(k=>k!==key):[...cur,key];
+    pushTemplateCell(person,day);
+    saveState();
+    const _p=person,_d=day;
+    render();
+    requestAnimationFrame(()=>{
+      syncNameSpacer();
+      if(document.getElementById("tpl-modal").style.display!=="none"){
+        buildTemplateGrid();
+        const newCell=document.getElementById(cellId("TPL",_p,_d));
+        if(newCell) showPopup(newCell.parentElement,null,_p,_d,true);
+      }
+    });
+  } else {
+    const k=weekKey(monday);
+    if(!manuallyEdited[k]) manuallyEdited[k]=new Set();
+    manuallyEdited[k].add(person+"-"+day);
+    const data=getData(monday);
+    if(!data[person]) data[person]={};
+    const cur=data[person][day]||[];
+    if(key==="vrij"||key==="extern"||key==="thuis"){
+      data[person][day]=cur.includes(key)?[]:[key];
+    } else {
+      const without=cur.filter(k2=>k2!=="vrij"&&k2!=="extern"&&k2!=="thuis");
+      data[person][day]=without.includes(key)?without.filter(k2=>k2!==key):[...without,key];
+    }
+    saveState();
+  }
+}
+
+function resetWeekToTemplate(monday){
+  const k=weekKey(monday);
+  store[k]=cloneTemplate();
+  delete manuallyEdited[k];
+  saveState();
+  renderAndSync();
+}
+
+// ── Prefill week 22 (2026) van whiteboard ────────────────────────
+(function prefill(){
+  function mondayOfWeek(wk,yr){ const jan1=new Date(yr,0,1); const j=jan1.getDay()||7; const m=new Date(jan1); m.setDate(jan1.getDate()+(wk-1)*7-(j-1)); return m; }
+  const m22=mondayOfWeek(22,2026), k22=weekKey(m22), w22=getData(m22);
+  if(!manuallyEdited[k22]) manuallyEdited[k22]=new Set();
+  function setCell(p,d,v){ w22[p][d]=v; manuallyEdited[k22].add(p+"-"+d); }
+  // Iedereen vrij op maandag
+  TEAM.forEach(p=>setCell(p,"MA",["vrij"]));
+  // Wim + Bram hele week vrij
+  ["DI","WO","DO","VR"].forEach(d=>{ setCell("Wim",d,["vrij"]); setCell("Bram",d,["vrij"]); });
+  // Overige dagen week 22
+  setCell("Wouter","DI",["kantoor"]);
+  setCell("Frederique","DI",["thuis"]);
+  setCell("Sercan","DI",["thuis"]); setCell("Sercan","WO",["thuis"]);
+  setCell("Marco","DI",["kantoor"]);
+  setCell("Dave","DI",["kantoor"]);
+})();
+
+// Propageer template naar weken die nog niet handmatig zijn ingesteld
+function propagateTemplateToAll(){
+  const thisMonday=mondayOf(today);
+  Object.keys(store).forEach(k=>{
+    const wkMonday=weekMondayFromKey(k);
+    const isFuture=wkMonday>thisMonday;
+    TEAM.forEach(p=>{ if(!template[p]) template[p]={}; DAYS.forEach(d=>{
+      const edited=manuallyEdited[k];
+      if(!edited||!edited.has(p+"-"+d)){
+        if(!store[k][p]) store[k][p]={};
+        store[k][p][d]=[...(template[p][d]||[])];
+      }
+    });});
+  });
+}
+// Wis verouderde localStorage als versie niet overeenkomt
+const lsRaw = localStorage.getItem(LS_KEY);
+if(lsRaw){
+  try{
+    const lsData = JSON.parse(lsRaw);
+    loadLocal();
+  }catch(e){ localStorage.removeItem(LS_KEY); }
+} else {
+  // Laad uit data-store tag in HTML
+  const el=document.getElementById("data-store");
+  const raw=el&&el.textContent.trim();
+  if(raw&&raw!=="null"){
+    try{ applyState(JSON.parse(raw)); }catch(e){}
+  }
+}
+// Verwijder eventuele __divider__ restanten uit opgeslagen data
+TEAM = TEAM.filter(p => p !== "__divider__");
+propagateTemplateToAll();
+restoreMap();
+
+// ── Popup ────────────────────────────────────────────────────────
+let openPopup=null;
+function closePopup(){ if(openPopup){ openPopup.el.remove(); openPopup=null; } }
+document.addEventListener("click",e=>{ if(openPopup&&!openPopup.el.contains(e.target)&&!e.target.closest(".cell")) closePopup(); });
+
+function showPopup(cellWrap,monday,person,day,isTemplate){
+  closePopup();
+  const popup=document.createElement("div"); popup.className="popup";
+  const title=document.createElement("div"); title.className="popup-title";
+  title.textContent=(isTemplate?"★ Standaard · ":"")+person+" · "+DAY_LABELS[day];
+  popup.appendChild(title);
+  const closeBtn=document.createElement("div"); closeBtn.className="popup-close"; closeBtn.textContent="Sluiten";
+  closeBtn.addEventListener("click",closePopup);
+  popup.appendChild(closeBtn);
+  function renderItems(){
+    popup.querySelectorAll(".popup-item").forEach(e=>e.remove());
+    const sel=isTemplate?(template[person][day]||[]):(getData(monday)[person][day]||[]);
+    STATUSES.forEach(s=>{
+      const active=sel.includes(s.key);
+      const item=document.createElement("div"); item.className="popup-item";
+      if(active){ item.style.background=s.color+"22"; item.style.border=`1px solid ${s.border}66`; }
+      item.innerHTML=`<div class="popup-dot" style="background:${active?s.color:"rgba(255,255,255,0.1)"};${active?`box-shadow:0 0 6px ${s.color}88`:""}"></div><span class="popup-label" style="color:${active?"#fff":"#888"}">${s.label}</span>${active?`<span class="popup-check" style="color:${s.color}">✓</span>`:""}`;
+      item.addEventListener("click",e=>{
+        e.stopPropagation();
+        toggleStatus(monday,person,day,s.key,isTemplate);
+        if(!isTemplate){
+          const _m=monday,_p=person,_d=day;
+          render();
+          requestAnimationFrame(()=>{
+            syncNameSpacer();
+            const newWrap=document.getElementById(cellId(weekKey(_m),_p,_d));
+            if(newWrap) showPopup(newWrap.parentElement,_m,_p,_d,false);
+          });
+        }
+      });
+      popup.insertBefore(item,closeBtn);
+    });
+  }
+  renderItems();
+  cellWrap.appendChild(popup);
+  openPopup={el:popup};
+}
+
+// ── Cell rendering ───────────────────────────────────────────────
+function cellId(key,person,day){ return `cell-${key}-${person.replace(/\s/g,"_")}-${day}`; }
+
+function renderCellContent(cell,sel){
+  const dots=sel.map(k=>STATUS_MAP[k]).filter(Boolean);
+  const visibleDots=dots.filter(s=>s.key!=="kantoor");
+  const dominant=visibleDots[0];
+  const hasVrij=dots.some(s=>s.key==="vrij");
+  const hasVmVrij=dots.some(s=>s.key==="vm_vrij");
+  const hasNmVrij=dots.some(s=>s.key==="nm_vrij");
+  const others=dots.filter(s=>!["vrij","vm_vrij","nm_vrij","kantoor"].includes(s.key));
+  cell.innerHTML="";
+  if(!dots.length){
+    cell.style.background="rgba(255,255,255,0.22)"; cell.style.border="1.5px solid rgba(255,255,255,0.30)";
+    const e=document.createElement("div"); e.className="cell-empty-dot"; cell.appendChild(e); return;
+  }
+  if(hasVrij){
+    cell.style.background="rgba(229,57,53,0.12)"; cell.style.border="1.5px solid rgba(229,57,53,0.5)";
+    const d=document.createElement("div"); d.className="dot"; d.style.background="#e53935"; d.style.boxShadow="0 0 6px #e5393588";
+    d.style.display="flex"; d.style.alignItems="center"; d.style.justifyContent="center";
+    const vlbl=document.createElement("span"); vlbl.textContent="V"; vlbl.style.cssText="font-size:8px;font-weight:700;color:rgba(0,0,0,0.45);line-height:1;";
+    d.appendChild(vlbl); cell.appendChild(d); return;
+  }
+  if(hasVmVrij||hasNmVrij){
+    cell.style.background="rgba(229,57,53,0.12)"; cell.style.border="1.5px solid rgba(229,57,53,0.5)";
+    const wrap=document.createElement("div"); wrap.className="half-indicator";
+    if(hasVmVrij){ const hc=document.createElement("div"); hc.className="half-circle-left"; wrap.appendChild(hc); }
+    if(hasNmVrij){ const hc=document.createElement("div"); hc.className="half-circle-right"; wrap.appendChild(hc); }
+    others.forEach(s=>{
+      const d=document.createElement("div"); d.className="dot"; d.style.background=s.color; d.style.boxShadow=`0 0 5px ${s.color}88`;
+      if(s.key==="thuis"){ d.style.display="flex"; d.style.alignItems="center"; d.style.justifyContent="center"; const lbl=document.createElement("span"); lbl.textContent="T"; lbl.style.cssText="font-size:8px;font-weight:700;color:rgba(0,0,0,0.45);line-height:1;"; d.appendChild(lbl); }
+      wrap.appendChild(d);
+    });
+    cell.appendChild(wrap); return;
+  }
+  if(!visibleDots.length){
+    cell.style.background="rgba(255,255,255,0.22)"; cell.style.border="1.5px solid rgba(255,255,255,0.30)";
+    if(dots.some(s=>s.key==="kantoor")){
+      const lbl=document.createElement("span");
+      lbl.textContent="K";
+      lbl.style.cssText="font-size:10px;font-weight:700;color:rgba(255,255,255,0.35);letter-spacing:0.5px;";
+      cell.appendChild(lbl);
+    }
+    return;
+  }
+  cell.style.background=dominant?`${dominant.color}22`:"rgba(255,255,255,0.22)";
+  cell.style.border=dominant?`1.5px solid ${dominant.border}66`:"1.5px solid rgba(255,255,255,0.30)";
+  others.forEach(s=>{
+    const d=document.createElement("div"); d.className="dot"; d.style.background=s.color; d.style.boxShadow=`0 0 5px ${s.color}88`;
+    if(s.key==="thuis"){
+      d.style.display="flex"; d.style.alignItems="center"; d.style.justifyContent="center";
+      const lbl=document.createElement("span"); lbl.textContent="T"; lbl.style.cssText="font-size:8px;font-weight:700;color:rgba(0,0,0,0.45);line-height:1;";
+      d.appendChild(lbl);
+    }
+    cell.appendChild(d);
+  });
+}
+
+// ── Template panel (modal) ───────────────────────────────────────
+let dragSrcName = null;
+
+function buildDragHandle(){
+  const h = document.createElement("div");
+  h.style.cssText = "cursor:grab;color:rgba(255,255,255,0.25);font-size:14px;padding:0 4px;user-select:none;flex-shrink:0;";
+  h.textContent = "⠿";
+  h.title = "Versleep om volgorde te wijzigen";
+  return h;
+}
+
+function renamePerson(oldName, newName){
+  newName = newName.trim();
+  if(!newName || newName === oldName || TEAM.includes(newName)) return false;
+  const idx = TEAM.indexOf(oldName);
+  if(idx === -1) return false;
+  TEAM[idx] = newName;
+  // Kopieer template data
+  template[newName] = template[oldName];
+  delete template[oldName];
+  // Kopieer store data
+  Object.keys(store).forEach(k=>{
+    if(store[k][oldName]){ store[k][newName]=store[k][oldName]; delete store[k][oldName]; }
+  });
+  // Kopieer manuallyEdited
+  Object.keys(manuallyEdited).forEach(k=>{
+    if(manuallyEdited[k]){
+      DAYS.forEach(d=>{
+        if(manuallyEdited[k].has(oldName+"-"+d)){
+          manuallyEdited[k].delete(oldName+"-"+d);
+          manuallyEdited[k].add(newName+"-"+d);
+        }
+      });
+    }
+  });
+  saveState();
+  buildTemplateGrid();
+  renderAndSync();
+  return true;
+}
+
+function addPerson(name){
+  name = name.trim();
+  if(!name || TEAM.includes(name)) return false;
+  TEAM.push(name);
+  // Voeg toe aan template
+  template[name] = {}; DAYS.forEach(d=>{ template[name][d]=["kantoor"]; });
+  // Voeg toe aan alle weken in store
+  Object.keys(store).forEach(k=>{
+    store[k][name] = {}; DAYS.forEach(d=>{ store[k][name][d]=[...(template[name][d]||[])]; });
+  });
+  saveState();
+  buildTemplateGrid();
+  renderAndSync();
+  return true;
+}
+
+function removePerson(name){
+  const idx = TEAM.indexOf(name);
+  if(idx === -1) return;
+  TEAM.splice(idx, 1);
+  delete template[name];
+  Object.keys(store).forEach(k=>{ delete store[k][name]; });
+  Object.keys(manuallyEdited).forEach(k=>{
+    if(manuallyEdited[k]) DAYS.forEach(d=>{ manuallyEdited[k].delete(name+"-"+d); });
+  });
+  saveState();
+  buildTemplateGrid();
+  renderAndSync();
+}
+
+function buildTemplateGrid(){
+  const container=document.getElementById("tpl-grid"); container.innerHTML="";
+  // Toevoegen-rij bovenaan — altijd zichtbaar
+  // (addRow wordt hieronder aangemaakt en dan direct toegevoegd)
+  // Header row met dag-kolommen
+  const hdrRow=document.createElement("div");
+  hdrRow.style.cssText="display:grid;grid-template-columns:130px repeat(5,1fr) 28px;gap:4px;margin-bottom:8px;align-items:center;";
+  hdrRow.appendChild(document.createElement("div"));
+  DAYS.forEach(day=>{ const d=document.createElement("div"); d.style.cssText="text-align:center;font-size:12px;font-weight:800;color:#fff;letter-spacing:1px;padding:6px 0;"; d.textContent=day; hdrRow.appendChild(d); });
+  hdrRow.appendChild(document.createElement("div")); // lege kolom voor verwijder-knop
+  // Toevoegen-rij bovenaan
+  const addRow=document.createElement("div");
+  addRow.style.cssText="display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.08);";
+  const inp=document.createElement("input");
+  inp.type="text"; inp.placeholder="Naam toevoegen...";
+  inp.style.cssText="flex:1;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;padding:6px 10px;font-size:12px;font-family:inherit;";
+  const addBtn=document.createElement("button");
+  addBtn.textContent="+ Toevoegen";
+  addBtn.style.cssText="background:rgba(128,203,196,0.15);border:1px solid rgba(128,203,196,0.4);color:#80cbc4;border-radius:6px;padding:6px 12px;font-size:11px;font-family:inherit;cursor:pointer;white-space:nowrap;";
+  addBtn.onclick=()=>{ if(inp.value.trim()){ const ok=addPerson(inp.value); if(ok) inp.value=""; else inp.style.borderColor="rgba(229,57,53,0.6)"; } };
+  inp.addEventListener("keydown",e=>{ if(e.key==="Enter") addBtn.click(); });
+  addRow.appendChild(inp);
+  addRow.appendChild(addBtn);
+  container.appendChild(addRow);
+  container.appendChild(hdrRow);
+  TEAM.forEach((person,pi)=>{
+    const row=document.createElement("div");
+    row.style.cssText=`display:grid;grid-template-columns:130px repeat(5,1fr) 28px;gap:4px;margin-bottom:3px;border-radius:6px;align-items:center;background:${pi%2===0?"rgba(255,255,255,0.015)":"transparent"}`;
+    const nameCell=document.createElement("div"); nameCell.style.cssText="display:flex;align-items:center;gap:6px;height:34px;padding:0 4px;";
+    const dragH = buildDragHandle();
+    const avatar = document.createElement("div");
+    avatar.style.cssText=`width:24px;height:24px;border-radius:50%;background:${AVATARS[pi]||"#666"};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0`;
+    avatar.textContent = person[0];
+    const nameSpan = document.createElement("span");
+    nameSpan.style.cssText=`font-size:12px;color:${person==="Hans"?"#FF6C00":"#d0d0d0"};font-weight:${person==="Hans"?700:400}`;
+    nameSpan.textContent = person;
+    const editBtn=document.createElement("button");
+    editBtn.textContent="✏";
+    editBtn.style.cssText="background:transparent;border:none;color:rgba(255,255,255,0.4);font-size:11px;cursor:pointer;padding:0 2px;flex-shrink:0;";
+    editBtn.title="Naam wijzigen";
+    editBtn.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      const inp2=document.createElement("input");
+      inp2.value=person;
+      inp2.style.cssText="font-size:12px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.5);border-radius:4px;color:#fff;padding:2px 6px;width:90px;font-family:inherit;outline:none;";
+      nameCell.replaceChild(inp2,nameSpan);
+      nameCell.removeChild(editBtn);
+      inp2.focus(); inp2.select();
+      const save=()=>{ renamePerson(person, inp2.value); };
+      inp2.addEventListener("blur",save);
+      inp2.addEventListener("keydown",e2=>{
+        if(e2.key==="Enter"){ e2.preventDefault(); inp2.blur(); }
+        if(e2.key==="Escape"){ inp2.removeEventListener("blur",save); nameCell.replaceChild(nameSpan,inp2); nameCell.appendChild(editBtn); }
+      });
+    });
+    nameCell.appendChild(editBtn); nameCell.appendChild(dragH); nameCell.appendChild(avatar); nameCell.appendChild(nameSpan);
+    row.appendChild(nameCell);
+
+    // Drag-and-drop
+    row.draggable = true;
+    row.dataset.person = person;
+    row.style.transition = "opacity 0.15s";
+    row.addEventListener("dragstart", e=>{
+      dragSrcName = person;
+      e.dataTransfer.effectAllowed = "move";
+      setTimeout(()=>{ row.style.opacity="0.4"; }, 0);
+    });
+    row.addEventListener("dragend", ()=>{ row.style.opacity="1"; });
+    row.addEventListener("dragover", e=>{
+      e.preventDefault(); e.dataTransfer.dropEffect="move";
+      row.style.outline = "2px solid rgba(128,203,196,0.6)";
+    });
+    row.addEventListener("dragleave", ()=>{ row.style.outline=""; });
+    row.addEventListener("drop", e=>{
+      e.preventDefault(); row.style.outline="";
+      if(!dragSrcName || dragSrcName===person) return;
+      const fromIdx = TEAM.indexOf(dragSrcName);
+      const toIdx   = TEAM.indexOf(person);
+      if(fromIdx<0||toIdx<0) return;
+      TEAM.splice(fromIdx, 1);
+      TEAM.splice(toIdx, 0, dragSrcName);
+      dragSrcName = null;
+      saveState();
+      buildTemplateGrid();
+      renderAndSync();
+    });
+    DAYS.forEach(day=>{
+      const wrap=document.createElement("div"); wrap.className="cell-wrap";
+      const cell=document.createElement("div"); cell.className="cell"; cell.id=cellId("TPL",person,day);
+      renderCellContent(cell,template[person][day]||[]);
+      cell.addEventListener("click",e=>{ e.stopPropagation(); if(openPopup&&wrap.contains(openPopup.el)){ closePopup(); return; } showPopup(wrap,null,person,day,true); });
+      wrap.appendChild(cell); row.appendChild(wrap);
+    });
+    // Verwijder-knop
+    const delBtn=document.createElement("button");
+    delBtn.textContent="✕";
+    delBtn.title=`${person} verwijderen`;
+    delBtn.style.cssText="background:transparent;border:1px solid rgba(244,143,177,0.3);color:rgba(244,143,177,0.6);border-radius:5px;width:24px;height:24px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;";
+    delBtn.onmouseenter=()=>{ delBtn.style.color="#f48fb1"; delBtn.style.borderColor="rgba(244,143,177,0.7)"; delBtn.style.background="rgba(244,143,177,0.1)"; };
+    delBtn.onmouseleave=()=>{ delBtn.style.color="rgba(244,143,177,0.6)"; delBtn.style.borderColor="rgba(244,143,177,0.3)"; delBtn.style.background="transparent"; };
+    const _person=person;
+    delBtn.onclick=(e)=>{
+      e.stopPropagation();
+      if(delBtn.dataset.confirm==="1"){
+        removePerson(_person);
+      } else {
+        delBtn.dataset.confirm="1";
+        delBtn.textContent="?";
+        delBtn.style.color="#f48fb1";
+        delBtn.style.background="rgba(244,143,177,0.2)";
+        delBtn.style.borderColor="rgba(244,143,177,0.7)";
+        setTimeout(()=>{
+          delBtn.dataset.confirm="";
+          delBtn.textContent="✕";
+          delBtn.style.color="rgba(244,143,177,0.6)";
+          delBtn.style.background="transparent";
+          delBtn.style.borderColor="rgba(244,143,177,0.3)";
+        }, 2000);
+      }
+    };
+    row.appendChild(delBtn);
+    container.appendChild(row);
+  });
+}
+
+// ── Week panel ───────────────────────────────────────────────────
+function buildWeekPanel(monday){
+  const thisWeekMonday=mondayOf(today);
+  const isCurrent=isSameDay(monday,thisWeekMonday);
+  const wk=getWeekNumber(monday), yr=monday.getFullYear();
+  const panel=document.createElement("div"); panel.className=`week-panel ${isCurrent?"current":"other"}`;
+  const hdr=document.createElement("div"); hdr.className="week-header";
+  const badge=document.createElement("div"); badge.className=`week-badge ${isCurrent?"current":"other"}`; badge.textContent=`Week ${wk}`;
+  const lbl=document.createElement("div"); lbl.className=`week-lbl ${isCurrent?"current":"other"}`;
+  const yearLabel=yr!==today.getFullYear()?` ${yr}`:"";
+  lbl.textContent=isCurrent?"huidige week":(isSameDay(monday,addWeeks(thisWeekMonday,1))?"volgende week":`week ${wk}${yearLabel}`);
+  const resetBtn=document.createElement("button"); resetBtn.className="reset-btn"; resetBtn.textContent="↺ Reset";
+  resetBtn.addEventListener("click",e=>{ e.stopPropagation(); resetWeekToTemplate(monday); });
+  hdr.appendChild(badge); hdr.appendChild(lbl); hdr.appendChild(resetBtn); panel.appendChild(hdr);
+  const dayHdr=document.createElement("div"); dayHdr.className="day-header";
+  DAYS.forEach((day,i)=>{
+    const dayDate=addDays(monday,i), isToday=isSameDay(dayDate,today);
+    const n=TEAM.filter(p=>(getData(monday)[p]||{})[day]&&(getData(monday)[p][day]||[]).includes("kantoor")).length;
+    const col=n>=7?"#f48fb1":n>=4?"#ffb74d":"#80cbc4";
+    const dh=document.createElement("div"); dh.className=`day-hd${isToday?" today-col":""}`;
+    dh.innerHTML=`<div class="day-hd-name${isToday?" today-col":""}">${day}</div><div class="day-hd-date${isToday?" today-col":""}">${fmtDate(dayDate)}</div>${isToday?`<div class="today-badge">vandaag</div>`:""}<div class="day-hd-count" id="cnt-${weekKey(monday)}-${day}" style="color:${col}">${n>0?n+"×":""}</div>`;
+    dayHdr.appendChild(dh);
+  });
+  panel.appendChild(dayHdr);
+  TEAM.forEach((person,pi)=>{
+    const row=document.createElement("div"); row.className=`person-row${pi%2===0?" alt":""}`;
+    DAYS.forEach((day,i)=>{
+      const dayDate=addDays(monday,i), isToday=isSameDay(dayDate,today);
+      const wrap=document.createElement("div"); wrap.className="cell-wrap";
+      const cell=document.createElement("div"); cell.className=`cell${isToday?" today-col":""}`; cell.id=cellId(weekKey(monday),person,day);
+      renderCellContent(cell,getData(monday)[person][day]||[]);
+      cell.addEventListener("click",e=>{ e.stopPropagation(); if(openPopup&&wrap.contains(openPopup.el)){ closePopup(); return; } showPopup(wrap,monday,person,day,false); });
+      wrap.appendChild(cell); row.appendChild(wrap);
+    });
+    panel.appendChild(row);
+  });
+
+  requestAnimationFrame(()=>{
+    const todayHd = panel.querySelector(".day-hd.today-col");
+    const todayCells = Array.from(panel.querySelectorAll(".cell.today-col"));
+    if(!todayHd || !todayCells.length) return;
+    const panelRect = panel.getBoundingClientRect();
+    const hdRect    = todayHd.getBoundingClientRect();
+    const lastRect  = todayCells[todayCells.length-1].getBoundingClientRect();
+    const overlay   = document.createElement("div");
+    overlay.className = "today-col-overlay";
+    overlay.style.left   = (hdRect.left   - panelRect.left   - 3) + "px";
+    overlay.style.top    = (hdRect.top    - panelRect.top    - 3) + "px";
+    overlay.style.width  = (hdRect.width  + 6) + "px";
+    overlay.style.height = (lastRect.bottom - hdRect.top + 6) + "px";
+    panel.querySelectorAll(".today-col-overlay").forEach(e=>e.remove());
+    panel.appendChild(overlay);
+  });
+
+  return panel;
+}
+
+// ── Name column ──────────────────────────────────────────────────
+function buildNameCol(){
+  const col=document.createElement("div"); col.className="name-col";
+  const spacer=document.createElement("div"); spacer.className="name-spacer"; col.appendChild(spacer);
+  TEAM.forEach((person,pi)=>{
+    const row=document.createElement("div"); row.className=`name-row${pi%2===0?" alt":""}`;
+    const av=document.createElement("div"); av.className="avatar"; av.style.background=AVATARS[pi%AVATARS.length]; av.textContent=person[0];
+    const nm=document.createElement("span"); nm.className=`name-label${person==="Hans"?" self":""}`; nm.textContent=person;
+    row.appendChild(av); row.appendChild(nm); col.appendChild(row);
+  });
+  return col;
+}
+
+// ── Legend ───────────────────────────────────────────────────────
+function buildLegend(){
+  const leg=document.getElementById("legend"); leg.innerHTML=`<span class="legend-title">Legenda</span>`;
+  // Kantoor legenda-item (apart, met K-indicator)
+  const kantoorItem=document.createElement("div"); kantoorItem.className="legend-item";
+  kantoorItem.innerHTML=`<div style="width:34px;height:20px;border-radius:5px;background:rgba(255,255,255,0.22);border:1.5px solid rgba(255,255,255,0.30);display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.35)">K</span></div><span class="legend-label">Kantoor</span>`;
+  leg.appendChild(kantoorItem);
+
+  STATUSES.forEach(s=>{
+    if(s.key==="kantoor") return;
+    const item=document.createElement("div"); item.className="legend-item";
+    if(s.key==="vrij"){
+      item.innerHTML=`<div class="legend-dot" style="background:#e53935;box-shadow:0 0 5px #e5393566"></div><span class="legend-label">${s.label}</span>`;
+    } else if(s.key==="vm_vrij"){
+      item.innerHTML=`<div style="width:13px;height:13px;border-radius:50%;border:1.5px solid #e53935;background:linear-gradient(to right,#e53935 50%,transparent 50%);flex-shrink:0"></div><span class="legend-label">${s.label}</span>`;
+    } else if(s.key==="nm_vrij"){
+      item.innerHTML=`<div style="width:13px;height:13px;border-radius:50%;border:1.5px solid #e53935;background:linear-gradient(to left,#e53935 50%,transparent 50%);flex-shrink:0"></div><span class="legend-label">${s.label}</span>`;
+    } else {
+      item.innerHTML=`<div class="legend-dot" style="background:${s.color};box-shadow:0 0 5px ${s.color}66"></div><span class="legend-label">${s.label}</span>`;
+    }
+    leg.appendChild(item);
+  });
+  const hint=document.createElement("span"); hint.className="legend-hint"; hint.textContent="klik cel → kies status(sen)";
+  leg.appendChild(hint);
+}
+
+// ── Render ───────────────────────────────────────────────────────
+let baseMonday=mondayOf(today);
+
+function render(){
+  closePopup();
+  const mA=baseMonday, mB=addWeeks(baseMonday,1);
+  const wA=getWeekNumber(mA),yrA=mA.getFullYear();
+  const wB=getWeekNumber(mB),yrB=mB.getFullYear();
+  const syA=yrA!==today.getFullYear()?` '${String(yrA).slice(2)}`:"";
+  const syB=yrB!==today.getFullYear()?` '${String(yrB).slice(2)}`:"";
+  document.getElementById("nav-info").innerHTML=`<span style="color:#aaa">W${wA}${syA}</span><span style="color:#444;margin:0 8px">+</span><span style="color:#aaa">W${wB}${syB}</span>`;
+  const grid=document.getElementById("main-grid"); grid.innerHTML="";
+  grid.appendChild(buildNameCol());
+  const d1=document.createElement("div"); d1.className="divider"; grid.appendChild(d1);
+  grid.appendChild(buildWeekPanel(mA));
+  const d2=document.createElement("div"); d2.className="divider"; grid.appendChild(d2);
+  grid.appendChild(buildWeekPanel(mB));
+  buildLegend();
+}
+
+function syncNameSpacer(){
+  const panels=Array.from(document.querySelectorAll(".week-panel"));
+  const nameCol=document.querySelector(".name-col");
+  const spacer=document.querySelector(".name-spacer");
+  if(!panels.length||!nameCol||!spacer) return;
+  panels.forEach(p=>{ const wh=p.querySelector(".week-header"); const dh=p.querySelector(".day-header"); if(wh) wh.style.height=""; if(dh) dh.style.height=""; });
+  const maxWH=Math.max(...panels.map(p=>{ const el=p.querySelector(".week-header"); return el?el.offsetHeight:0; }));
+  const maxDH=Math.max(...panels.map(p=>{ const el=p.querySelector(".day-header"); return el?el.offsetHeight:0; }));
+  panels.forEach(p=>{ const wh=p.querySelector(".week-header"); const dh=p.querySelector(".day-header"); if(wh) wh.style.height=maxWH+"px"; if(dh) dh.style.height=maxDH+"px"; });
+  const firstRow=panels[0].querySelector(".person-row");
+  if(!firstRow) return;
+  spacer.style.height=(firstRow.getBoundingClientRect().top-nameCol.getBoundingClientRect().top)+"px";
+}
+
+function renderAndSync(){
+  render();
+  // Dubbele rAF zodat de layout volledig gesetteld is voor meting
+  requestAnimationFrame(()=>requestAnimationFrame(syncNameSpacer));
+}
+
+// ── Nav & modal ──────────────────────────────────────────────────
+window.addEventListener("resize", ()=>requestAnimationFrame(syncNameSpacer));
+
+document.getElementById("btn-prev1").addEventListener("click",()=>{ baseMonday=addWeeks(baseMonday,-1); renderAndSync(); });
+document.getElementById("btn-next1").addEventListener("click",()=>{ baseMonday=addWeeks(baseMonday, 1); renderAndSync(); });
+document.getElementById("btn-prev").addEventListener("click",()=>{ baseMonday=addWeeks(baseMonday,-4); renderAndSync(); });
+document.getElementById("btn-next").addEventListener("click",()=>{ baseMonday=addWeeks(baseMonday, 4); renderAndSync(); });
+document.getElementById("btn-now").addEventListener("click",()=>{ baseMonday=mondayOf(today); renderAndSync(); });
+
+const tplModal=document.getElementById("tpl-modal");
+document.getElementById("btn-template").addEventListener("click",()=>{ buildTemplateGrid(); tplModal.style.display="block"; });
+document.getElementById("tpl-close").addEventListener("click",()=>{ closePopup(); tplModal.style.display="none"; });
+tplModal.addEventListener("click",e=>{ if(e.target===tplModal){ closePopup(); tplModal.style.display="none"; } });
+
+renderAndSync();
+
+// Ververs het rooster elke minuut (bijv. voor de vandaag-markering)
+setInterval(renderAndSync, 60000);
+
+// Sla staat elke minuut automatisch op
+setInterval(saveState, 60000);
+</script>
+
+
+</body></html>
