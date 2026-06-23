@@ -1104,6 +1104,14 @@ document.getElementById("btn-restore-backup").addEventListener("click", async ()
 });
 
 // Ververs het rooster elke minuut (vandaag-markering) — wordt al gedaan door de GitHub sync interval
+
+// Herlaad de pagina elke 5 minuten om code-updates van GitHub Pages op te pikken
+// Sla op eerst zodat geen data verloren gaat
+setInterval(async ()=>{
+  if(ghSaving) return; // wacht af als er nog opgeslagen wordt
+  await saveToGitHub().catch(()=>{});
+  location.reload();
+}, 5 * 60 * 1000);
 </script>
 
 
