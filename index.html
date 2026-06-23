@@ -596,8 +596,10 @@ function renderCellContent(cell,sel){
     cell.style.background = `linear-gradient(to right, ${leftColor} 50%, ${rightColor} 50%)`;
     cell.style.border = `1.5px solid ${borderColor}`;
     // Labels in split-cel
+    if(hasVmVrij)    addLabel("V","rgba(255,255,255,1)","left");
     if(hasVmKantoor) addLabel("K","rgba(255,255,255,1)","left");
     if(hasVmThuis)   addLabel("T","rgba(255,255,255,1)","left");
+    if(hasNmVrij)    addLabel("V","rgba(255,255,255,1)","right");
     if(hasNmKantoor) addLabel("K","rgba(255,255,255,1)","right");
     if(hasNmThuis)   addLabel("T","rgba(255,255,255,1)","right");
     // Extra bolletjes voor andere statussen (extern, vrij-heel-dag, etc.)
@@ -605,12 +607,17 @@ function renderCellContent(cell,sel){
     rest.forEach(s=>{ cell.appendChild(makeDot(s)); });
   } else {
     // Achtergrond bepalen op basis van dominant (niet-kantoor) status
+    const hasVrij=dots.some(s=>s.key==="vrij");
     const dominant=dots.find(s=>s.key!=="kantoor")||dots[0];
     cell.style.background=`${dominant.color}22`;
     cell.style.border=`1.5px solid ${dominant.border}66`;
 
     // Altijd K of T tonen voor kantoor/thuis (hele dag)
-    if(hasKantoor && !hasThuis){
+    if(hasVrij && !hasKantoor && !hasThuis && dots.length===1){
+      // Alleen vrij: rode achtergrond + V
+      cell.style.background="rgba(229,57,53,0.18)"; cell.style.border="1.5px solid rgba(229,57,53,0.5)";
+      addLabel("V","rgba(255,255,255,1)","full");
+    } else if(hasKantoor && !hasThuis){
       // Alleen kantoor: grijze achtergrond + K
       cell.style.background="rgba(255,255,255,0.22)"; cell.style.border="1.5px solid rgba(255,255,255,0.30)";
       addLabel("K","rgba(255,255,255,1)","full");
