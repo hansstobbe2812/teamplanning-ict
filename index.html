@@ -505,15 +505,15 @@ function propagateTemplateToAll(){
   // restoreMap alleen voor lokaal wegschrijven, NIET voor laden (GitHub heeft al prioriteit gehad)
   if(!ghLoaded) restoreMap();
   renderAndSync();
-  // Achtergrond-sync: herlaad van GitHub elke 20 seconden
+  // Achtergrond-sync: herlaad van GitHub elke 60 seconden
   setInterval(async ()=>{
-    if(ghSaving) return; // niet herladen terwijl we aan het opslaan zijn
+    if(ghSaving) return;
     const beforeJson = JSON.stringify(serializeState());
     const loaded = await loadFromGitHub();
     if(loaded && JSON.stringify(serializeState()) !== beforeJson){
       renderAndSync();
     }
-  }, 20000);
+  }, 60000);
 })();
 
 // ── Popup ────────────────────────────────────────────────────────
@@ -963,11 +963,7 @@ document.getElementById("btn-template").addEventListener("click",()=>{ buildTemp
 document.getElementById("tpl-close").addEventListener("click",()=>{ closePopup(); tplModal.style.display="none"; });
 tplModal.addEventListener("click",e=>{ if(e.target===tplModal){ closePopup(); tplModal.style.display="none"; } });
 
-// Ververs het rooster elke minuut (bijv. voor de vandaag-markering)
-setInterval(renderAndSync, 60000);
-
-// Sla staat elke minuut automatisch op
-setInterval(saveState, 60000);
+// Ververs het rooster elke minuut (vandaag-markering) — wordt al gedaan door de GitHub sync interval
 </script>
 
 
