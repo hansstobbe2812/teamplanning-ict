@@ -51,7 +51,7 @@ button { font-family:inherit; cursor:pointer; }
 .person-row { display:grid; grid-template-columns:repeat(5,1fr); gap:3px; margin-bottom:3px; padding:2px 0; border-radius:6px; box-sizing:border-box; }
 .person-row.alt { background:rgba(255,255,255,0.015); }
 .cell-wrap { position:relative; }
-.cell { height:34px; border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px; transition:all 0.12s; user-select:none; }
+.cell { height:34px; border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:2px; flex-wrap:wrap; padding:2px; transition:all 0.12s; user-select:none; }
 .cell:hover { filter:brightness(1.3); }
 .cell.today-col { }
 .cell-empty-dot { width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,0.08); }
@@ -527,57 +527,55 @@ function cellId(key,person,day){ return `cell-${key}-${person.replace(/\s/g,"_")
 
 function renderCellContent(cell,sel){
   const dots=sel.map(k=>STATUS_MAP[k]).filter(Boolean);
-  const visibleDots=dots.filter(s=>s.key!=="kantoor");
-  const dominant=visibleDots[0];
-  const hasVrij=dots.some(s=>s.key==="vrij");
-  const hasVmVrij=dots.some(s=>s.key==="vm_vrij");
-  const hasNmVrij=dots.some(s=>s.key==="nm_vrij");
-  const others=dots.filter(s=>!["vrij","vm_vrij","nm_vrij","kantoor"].includes(s.key));
   cell.innerHTML="";
+
+  // Leeg
   if(!dots.length){
     cell.style.background="rgba(255,255,255,0.22)"; cell.style.border="1.5px solid rgba(255,255,255,0.30)";
     const e=document.createElement("div"); e.className="cell-empty-dot"; cell.appendChild(e); return;
   }
-  if(hasVrij){
-    cell.style.background="rgba(229,57,53,0.12)"; cell.style.border="1.5px solid rgba(229,57,53,0.5)";
-    const d=document.createElement("div"); d.className="dot"; d.style.background="#e53935"; d.style.boxShadow="0 0 6px #e5393588";
-    d.style.display="flex"; d.style.alignItems="center"; d.style.justifyContent="center";
-    const vlbl=document.createElement("span"); vlbl.textContent="V"; vlbl.style.cssText="font-size:8px;font-weight:700;color:rgba(0,0,0,0.45);line-height:1;";
-    d.appendChild(vlbl); cell.appendChild(d); return;
+
+  // Alleen kantoor → K label
+  if(dots.length===1 && dots[0].key==="kantoor"){
+    cell.style.background="rgba(255,255,255,0.22)"; cell.style.border="1.5px solid rgba(255,255,255,0.30)";
+    const lbl=document.createElement("span");
+    lbl.textContent="K"; lbl.style.cssText="font-size:10px;font-weight:700;color:rgba(255,255,255,0.35);letter-spacing:0.5px;";
+    cell.appendChild(lbl); return;
   }
+
+  // Achtergrond bepalen op basis van eerste niet-kantoor status
+  const dominant=dots.find(s=>s.key!=="kantoor")||dots[0];
+  cell.style.background=`${dominant.color}22`;
+  cell.style.border=`1.5px solid ${dominant.border}66`;
+
+  // Toon een bolletje per geselecteerde status
+  // Speciale weergave: vm_vrij en nm_vrij samen → half-indicator
+  const hasVmVrij=dots.some(s=>s.key==="vm_vrij");
+  const hasNmVrij=dots.some(s=>s.key==="nm_vrij");
+  const rest=dots.filter(s=>s.key!=="vm_vrij"&&s.key!=="nm_vrij");
+
   if(hasVmVrij||hasNmVrij){
-    cell.style.background="rgba(229,57,53,0.12)"; cell.style.border="1.5px solid rgba(229,57,53,0.5)";
     const wrap=document.createElement("div"); wrap.className="half-indicator";
     if(hasVmVrij){ const hc=document.createElement("div"); hc.className="half-circle-left"; wrap.appendChild(hc); }
     if(hasNmVrij){ const hc=document.createElement("div"); hc.className="half-circle-right"; wrap.appendChild(hc); }
-    others.forEach(s=>{
-      const d=document.createElement("div"); d.className="dot"; d.style.background=s.color; d.style.boxShadow=`0 0 5px ${s.color}88`;
-      if(s.key==="thuis"){ d.style.display="flex"; d.style.alignItems="center"; d.style.justifyContent="center"; const lbl=document.createElement("span"); lbl.textContent="T"; lbl.style.cssText="font-size:8px;font-weight:700;color:rgba(0,0,0,0.45);line-height:1;"; d.appendChild(lbl); }
-      wrap.appendChild(d);
-    });
-    cell.appendChild(wrap); return;
+    rest.forEach(s=>{ wrap.appendChild(makeDot(s)); });
+    cell.appendChild(wrap);
+  } else {
+    dots.forEach(s=>{ cell.appendChild(makeDot(s)); });
   }
-  if(!visibleDots.length){
-    cell.style.background="rgba(255,255,255,0.22)"; cell.style.border="1.5px solid rgba(255,255,255,0.30)";
-    if(dots.some(s=>s.key==="kantoor")){
-      const lbl=document.createElement("span");
-      lbl.textContent="K";
-      lbl.style.cssText="font-size:10px;font-weight:700;color:rgba(255,255,255,0.35);letter-spacing:0.5px;";
-      cell.appendChild(lbl);
-    }
-    return;
+}
+
+function makeDot(s){
+  const d=document.createElement("div"); d.className="dot";
+  d.style.background=s.color; d.style.boxShadow=`0 0 6px ${s.color}88`;
+  d.style.display="flex"; d.style.alignItems="center"; d.style.justifyContent="center";
+  const LABELS={"kantoor":"K","thuis":"T","vrij":"V","extern":"E","deel":"D"};
+  if(LABELS[s.key]){
+    const lbl=document.createElement("span"); lbl.textContent=LABELS[s.key];
+    lbl.style.cssText="font-size:8px;font-weight:700;color:rgba(0,0,0,0.45);line-height:1;";
+    d.appendChild(lbl);
   }
-  cell.style.background=dominant?`${dominant.color}22`:"rgba(255,255,255,0.22)";
-  cell.style.border=dominant?`1.5px solid ${dominant.border}66`:"1.5px solid rgba(255,255,255,0.30)";
-  others.forEach(s=>{
-    const d=document.createElement("div"); d.className="dot"; d.style.background=s.color; d.style.boxShadow=`0 0 5px ${s.color}88`;
-    if(s.key==="thuis"){
-      d.style.display="flex"; d.style.alignItems="center"; d.style.justifyContent="center";
-      const lbl=document.createElement("span"); lbl.textContent="T"; lbl.style.cssText="font-size:8px;font-weight:700;color:rgba(0,0,0,0.45);line-height:1;";
-      d.appendChild(lbl);
-    }
-    cell.appendChild(d);
-  });
+  return d;
 }
 
 // ── Template panel (modal) ───────────────────────────────────────
