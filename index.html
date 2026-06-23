@@ -1025,15 +1025,53 @@ document.getElementById("btn-restore-backup").addEventListener("click", async ()
     overlay.style.cssText="position:fixed;inset:0;z-index:700;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;";
     const box = document.createElement("div");
     box.style.cssText="background:#111827;border:1px solid rgba(255,165,0,0.4);border-radius:14px;padding:24px 22px;min-width:280px;max-width:340px;";
-    box.innerHTML=`<div style="font-size:14px;font-weight:700;color:#ffb74d;margin-bottom:14px;">⟳ Backup herstellen</div>
-      <div style="font-size:10px;color:#777;margin-bottom:10px;letter-spacing:1px;text-transform:uppercase;">Kies een datum</div>
-      <select id="backup-select" style="width:100%;background:#1a1a2e;color:#eee;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;font-family:inherit;font-size:12px;margin-bottom:16px;">
-        ${sorted.map(f=>`<option value="${f.download_url}">${f.name.replace(".json","")}</option>`).join("")}
-      </select>
-      <div style="display:flex;gap:8px;justify-content:flex-end;">
-        <button id="backup-cancel" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#aaa;border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-family:inherit;">Annuleren</button>
-        <button id="backup-confirm" style="background:rgba(255,165,0,0.15);border:1px solid rgba(255,165,0,0.4);color:#ffb74d;border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:700;">Terugzetten</button>
-      </div>`;
+    // Maak-backup knop bovenaan
+    const makeBtn = document.createElement("button");
+    makeBtn.textContent = "＋ Maak nu een backup";
+    makeBtn.style.cssText = "width:100%;background:rgba(100,200,100,0.1);border:1px solid rgba(100,200,100,0.3);color:#80cbc4;border-radius:8px;padding:8px 12px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:700;margin-bottom:14px;letter-spacing:0.5px;";
+    makeBtn.onclick = async ()=>{
+      makeBtn.textContent = "⟳ Bezig..."; makeBtn.disabled=true;
+      const today = new Date().toISOString().slice(0,10);
+      const json = JSON.stringify(serializeState());
+      const content = encodeBase64(json);
+      const r = await ghPut(`backups/${today}.json`, content, `Handmatige backup ${today}`).catch(e=>null);
+      if(r && r.ok){
+        makeBtn.textContent = "✓ Backup gemaakt voor " + today;
+        makeBtn.style.color = "#80cbc4";
+      } else {
+        makeBtn.textContent = "✗ Mislukt";
+        makeBtn.style.color = "#f48fb1";
+      }
+      setTimeout(()=>{ makeBtn.textContent="＋ Maak nu een backup"; makeBtn.disabled=false; }, 2500);
+    };
+    box.appendChild(makeBtn);
+
+    // Rest van modal via DOM (niet innerHTML om makeBtn te behouden)
+    const sep = document.createElement("div");
+    sep.style.cssText = "height:1px;background:rgba(255,255,255,0.08);margin-bottom:14px;";
+    box.appendChild(sep);
+
+    const restoreTitle = document.createElement("div");
+    restoreTitle.style.cssText = "font-size:14px;font-weight:700;color:#ffb74d;margin-bottom:10px;";
+    restoreTitle.textContent = "⟳ Backup herstellen";
+    box.appendChild(restoreTitle);
+
+    const selectLbl = document.createElement("div");
+    selectLbl.style.cssText = "font-size:10px;color:#777;margin-bottom:10px;letter-spacing:1px;text-transform:uppercase;";
+    selectLbl.textContent = "Kies een datum";
+    box.appendChild(selectLbl);
+
+    const sel = document.createElement("select");
+    sel.id = "backup-select";
+    sel.style.cssText = "width:100%;background:#1a1a2e;color:#eee;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;font-family:inherit;font-size:12px;margin-bottom:16px;";
+    sorted.forEach(f=>{ const o=document.createElement("option"); o.value=f.download_url; o.textContent=f.name.replace(".json",""); sel.appendChild(o); });
+    box.appendChild(sel);
+
+    const btnRow = document.createElement("div");
+    btnRow.style.cssText = "display:flex;gap:8px;justify-content:flex-end;";
+    btnRow.innerHTML = `<button id="backup-cancel" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#aaa;border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-family:inherit;">Annuleren</button>
+      <button id="backup-confirm" style="background:rgba(255,165,0,0.15);border:1px solid rgba(255,165,0,0.4);color:#ffb74d;border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:700;">Terugzetten</button>`;
+    box.appendChild(btnRow);
     overlay.appendChild(box);
     document.body.appendChild(overlay);
 
