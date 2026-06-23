@@ -389,8 +389,17 @@ function toggleStatus(monday,person,day,key,isTemplate){
     const data=getData(monday);
     if(!data[person]) data[person]={};
     const cur=data[person][day]||[];
-    // Volledig multiselect: toggle aan/uit, geen uitsluiting meer
-    data[person][day]=cur.includes(key)?cur.filter(k2=>k2!==key):[...cur,key];
+    // Multiselect met constraints:
+    // - vrij sluit vm_vrij en nm_vrij uit (en andersom)
+    let next;
+    if(cur.includes(key)){
+      next=cur.filter(k2=>k2!==key); // uitzetten
+    } else {
+      next=[...cur,key];
+      if(key==="vrij") next=next.filter(k2=>k2!=="vm_vrij"&&k2!=="nm_vrij");
+      if(key==="vm_vrij"||key==="nm_vrij") next=next.filter(k2=>k2!=="vrij");
+    }
+    data[person][day]=next;
     saveState();
   }
 }
