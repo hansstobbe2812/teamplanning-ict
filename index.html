@@ -1031,12 +1031,15 @@ document.getElementById("btn-restore-backup").addEventListener("click", async ()
     makeBtn.style.cssText = "width:100%;background:rgba(100,200,100,0.1);border:1px solid rgba(100,200,100,0.3);color:#80cbc4;border-radius:8px;padding:8px 12px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:700;margin-bottom:14px;letter-spacing:0.5px;";
     makeBtn.onclick = async ()=>{
       makeBtn.textContent = "⟳ Bezig..."; makeBtn.disabled=true;
-      const today = new Date().toISOString().slice(0,10);
+      const now = new Date();
+      const today = now.toISOString().slice(0,10);
+      const time = now.toTimeString().slice(0,5).replace(":","-");
+      const filename = `${today}_${time}`;
       const json = JSON.stringify(serializeState());
       const content = encodeBase64(json);
-      const r = await ghPut(`backups/${today}.json`, content, `Handmatige backup ${today}`).catch(e=>null);
+      const r = await ghPut(`backups/${filename}.json`, content, `Handmatige backup ${filename}`).catch(e=>null);
       if(r && r.ok){
-        makeBtn.textContent = "✓ Backup gemaakt voor " + today;
+        makeBtn.textContent = "✓ Backup gemaakt: " + filename.replace("_"," ");
         makeBtn.style.color = "#80cbc4";
       } else {
         makeBtn.textContent = "✗ Mislukt";
