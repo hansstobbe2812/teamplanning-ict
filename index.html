@@ -389,12 +389,8 @@ function toggleStatus(monday,person,day,key,isTemplate){
     const data=getData(monday);
     if(!data[person]) data[person]={};
     const cur=data[person][day]||[];
-    if(key==="vrij"||key==="extern"||key==="thuis"){
-      data[person][day]=cur.includes(key)?[]:[key];
-    } else {
-      const without=cur.filter(k2=>k2!=="vrij"&&k2!=="extern"&&k2!=="thuis");
-      data[person][day]=without.includes(key)?without.filter(k2=>k2!==key):[...without,key];
-    }
+    // Volledig multiselect: toggle aan/uit, geen uitsluiting meer
+    data[person][day]=cur.includes(key)?cur.filter(k2=>k2!==key):[...cur,key];
     saveState();
   }
 }
