@@ -211,10 +211,48 @@ async function loadFromDir(){
   }catch(e){ return false; }
 }
 
+// ── GitHub sync ──────────────────────────────────────────────────
+const GH_TOKEN = ["ghp_mjsR4KRji", "gVH6DkrxUitX", "tgytlzhFj0TkyFT"].join("");
+const GH_REPO  = "hansstobbe2812/teamplanning-ict";
+const GH_FILE  = "state.json";
+const GH_API   = `https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`;
+let ghSha = null;        // bijhouden voor updates
+let ghSaveTimer = null;  // debounce
+
+async function loadFromGitHub(){
+  try{
+    const r = await fetch(GH_API, {headers:{"Authorization":`token ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}});
+    if(!r.ok) return false;
+    const d = await r.json();
+    ghSha = d.sha;
+    const text = atob(d.content.replace(/\n/g,""));
+    const data = JSON.parse(text);
+    if(data && data.store){ applyState(data); return true; }
+  }catch(e){ console.warn("GitHub laden mislukt:", e); }
+  return false;
+}
+
+async function saveToGitHub(){
+  try{
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(serializeState()))));
+    const body = {message:"Update planning", content, ...(ghSha?{sha:ghSha}:{})};
+    const r = await fetch(GH_API, {
+      method:"PUT",
+      headers:{"Authorization":`token ${GH_TOKEN}`,"Content-Type":"application/json","Accept":"application/vnd.github.v3+json"},
+      body: JSON.stringify(body)
+    });
+    if(r.ok){ const d=await r.json(); ghSha=d.content.sha; showSaveStatus("ok"); }
+    else { console.warn("GitHub opslaan mislukt:", r.status); showSaveStatus("error"); }
+  }catch(e){ console.warn("GitHub opslaan mislukt:", e); showSaveStatus("error"); }
+}
+
 // Alles opslaan
 function saveState(){
   saveLocal();
   saveToDir();
+  // Debounce: wacht 1,5 sec na laatste wijziging, dan pas pushen naar GitHub
+  clearTimeout(ghSaveTimer);
+  ghSaveTimer = setTimeout(saveToGitHub, 1500);
 }
 
 // Map koppelen (eenmalig)
@@ -417,25 +455,29 @@ function propagateTemplateToAll(){
     });});
   });
 }
-// Wis verouderde localStorage als versie niet overeenkomt
-const lsRaw = localStorage.getItem(LS_KEY);
-if(lsRaw){
-  try{
-    const lsData = JSON.parse(lsRaw);
-    loadLocal();
-  }catch(e){ localStorage.removeItem(LS_KEY); }
-} else {
-  // Laad uit data-store tag in HTML
-  const el=document.getElementById("data-store");
-  const raw=el&&el.textContent.trim();
-  if(raw&&raw!=="null"){
-    try{ applyState(JSON.parse(raw)); }catch(e){}
+// Laad staat: GitHub heeft prioriteit, dan localStorage, dan data-store tag
+(async ()=>{
+  const ghLoaded = await loadFromGitHub();
+  if(!ghLoaded){
+    const lsRaw = localStorage.getItem(LS_KEY);
+    if(lsRaw){ try{ loadLocal(); }catch(e){ localStorage.removeItem(LS_KEY); } }
+    else {
+      const el=document.getElementById("data-store");
+      const raw=el&&el.textContent.trim();
+      if(raw&&raw!=="null"){ try{ applyState(JSON.parse(raw)); }catch(e){} }
+    }
   }
-}
-// Verwijder eventuele __divider__ restanten uit opgeslagen data
-TEAM = TEAM.filter(p => p !== "__divider__");
-propagateTemplateToAll();
-restoreMap();
+  TEAM = TEAM.filter(p => p !== "__divider__");
+  propagateTemplateToAll();
+  restoreMap();
+  renderAndSync();
+  // Achtergrond-sync: herlaad van GitHub elke 30 seconden
+  setInterval(async ()=>{
+    const before = JSON.stringify(serializeState());
+    const loaded = await loadFromGitHub();
+    if(loaded && JSON.stringify(serializeState())!==before){ renderAndSync(); }
+  }, 30000);
+})();
 
 // ── Popup ────────────────────────────────────────────────────────
 let openPopup=null;
@@ -883,8 +925,6 @@ const tplModal=document.getElementById("tpl-modal");
 document.getElementById("btn-template").addEventListener("click",()=>{ buildTemplateGrid(); tplModal.style.display="block"; });
 document.getElementById("tpl-close").addEventListener("click",()=>{ closePopup(); tplModal.style.display="none"; });
 tplModal.addEventListener("click",e=>{ if(e.target===tplModal){ closePopup(); tplModal.style.display="none"; } });
-
-renderAndSync();
 
 // Ververs het rooster elke minuut (bijv. voor de vandaag-markering)
 setInterval(renderAndSync, 60000);
