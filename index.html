@@ -509,15 +509,20 @@ function showPopup(cellWrap,monday,person,day,isTemplate){
   function renderItems(){
     popup.querySelectorAll(".popup-item").forEach(e=>e.remove());
     const sel=isTemplate?(template[person][day]||[]):(getData(monday)[person][day]||[]);
+    const GROUP_LABELS={"kantoor":"Kantoor","thuis":"Thuis","vrij":"Vrij","overig":"Overig"};
     let lastGroup=null;
     STATUSES.forEach(s=>{
-      // Groepscheiding
+      // Groepslabel + scheiding
       if(s.group!==lastGroup){
         if(lastGroup!==null){
           const div=document.createElement("div");
-          div.style.cssText="height:1px;background:rgba(255,255,255,0.08);margin:4px 4px;";
+          div.style.cssText="height:1px;background:rgba(255,255,255,0.1);margin:5px 6px 3px;";
           popup.insertBefore(div,closeBtn);
         }
+        const lbl=document.createElement("div");
+        lbl.textContent=GROUP_LABELS[s.group]||s.group;
+        lbl.style.cssText="font-size:8px;font-weight:700;color:rgba(255,255,255,0.35);letter-spacing:1.5px;text-transform:uppercase;padding:4px 8px 1px;";
+        popup.insertBefore(lbl,closeBtn);
         lastGroup=s.group;
       }
       const active=sel.includes(s.key);
