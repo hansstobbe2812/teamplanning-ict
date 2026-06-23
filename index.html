@@ -618,8 +618,8 @@ function renderCellContent(cell,sel){
       cell.style.background="rgba(229,57,53,0.18)"; cell.style.border="1.5px solid rgba(229,57,53,0.5)";
       addLabel("V","rgba(255,255,255,1)","full");
     } else if(hasKantoor && !hasThuis){
-      // Alleen kantoor: grijze achtergrond + K
-      cell.style.background="rgba(255,255,255,0.22)"; cell.style.border="1.5px solid rgba(255,255,255,0.30)";
+      // Alleen kantoor: zelfde grijs als halve-dag kantoor
+      cell.style.background="rgba(200,200,200,0.45)"; cell.style.border="1.5px solid rgba(200,200,200,0.4)";
       addLabel("K","rgba(255,255,255,1)","full");
       // Extra bolletjes voor andere statussen
       dots.filter(s=>s.key!=="kantoor").forEach(s=>{ cell.appendChild(makeDot(s)); });
