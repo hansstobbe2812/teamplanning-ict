@@ -132,16 +132,16 @@ const DAY_LABELS = {MA:"Maandag",DI:"Dinsdag",WO:"Woensdag",DO:"Donderdag",VR:"V
 const AVATARS = ["#7c5cbf","#3a8a82","#c47a2e","#b54d6a","#8a4db5","#3a7a5c","#5c7ab5","#b54d4d","#FF6C00","#4d7a3a","#5c4d8a"];
 
 const STATUSES = [
-  { key:"kantoor",    label:"Kantoor",                color:"#66bb6a", border:"#43a047" },
-  { key:"thuis",      label:"Thuis",                  color:"#4caf50", border:"#388e3c" },
-  { key:"vm_kantoor", label:"'s Ochtends op kantoor", color:"#aaaaaa", border:"#888888" },
-  { key:"nm_kantoor", label:"'s Middags op kantoor",  color:"#aaaaaa", border:"#888888" },
-  { key:"vm_thuis",   label:"'s Ochtends thuis",      color:"#4caf50", border:"#388e3c" },
-  { key:"nm_thuis",   label:"'s Middags thuis",        color:"#4caf50", border:"#388e3c" },
-  { key:"vrij",       label:"Vrije dag",              color:"#e53935", border:"#e53935" },
-  { key:"vm_vrij",    label:"'s Ochtends vrij",       color:"#e53935", border:"#e53935" },
-  { key:"nm_vrij",    label:"'s Middags vrij",        color:"#e53935", border:"#e53935" },
-  { key:"extern",     label:"Extern",                 color:"#ce93d8", border:"#ab47bc" },
+  { key:"kantoor",    label:"Kantoor",                color:"#aaaaaa", border:"#888888", group:"kantoor" },
+  { key:"vm_kantoor", label:"'s Ochtends op kantoor", color:"#aaaaaa", border:"#888888", group:"kantoor" },
+  { key:"nm_kantoor", label:"'s Middags op kantoor",  color:"#aaaaaa", border:"#888888", group:"kantoor" },
+  { key:"thuis",      label:"Thuis",                  color:"#4caf50", border:"#388e3c", group:"thuis"   },
+  { key:"vm_thuis",   label:"'s Ochtends thuis",      color:"#4caf50", border:"#388e3c", group:"thuis"   },
+  { key:"nm_thuis",   label:"'s Middags thuis",       color:"#4caf50", border:"#388e3c", group:"thuis"   },
+  { key:"vrij",       label:"Vrije dag",              color:"#e53935", border:"#e53935", group:"vrij"    },
+  { key:"vm_vrij",    label:"'s Ochtends vrij",       color:"#e53935", border:"#e53935", group:"vrij"    },
+  { key:"nm_vrij",    label:"'s Middags vrij",        color:"#e53935", border:"#e53935", group:"vrij"    },
+  { key:"extern",     label:"Extern",                 color:"#ce93d8", border:"#ab47bc", group:"overig"  },
 ];
 const STATUS_MAP = Object.fromEntries(STATUSES.map(s=>[s.key,s]));
 
@@ -509,7 +509,17 @@ function showPopup(cellWrap,monday,person,day,isTemplate){
   function renderItems(){
     popup.querySelectorAll(".popup-item").forEach(e=>e.remove());
     const sel=isTemplate?(template[person][day]||[]):(getData(monday)[person][day]||[]);
+    let lastGroup=null;
     STATUSES.forEach(s=>{
+      // Groepscheiding
+      if(s.group!==lastGroup){
+        if(lastGroup!==null){
+          const div=document.createElement("div");
+          div.style.cssText="height:1px;background:rgba(255,255,255,0.08);margin:4px 4px;";
+          popup.insertBefore(div,closeBtn);
+        }
+        lastGroup=s.group;
+      }
       const active=sel.includes(s.key);
       const item=document.createElement("div"); item.className="popup-item";
       if(active){ item.style.background=s.color+"22"; item.style.border=`1px solid ${s.border}66`; }
