@@ -564,28 +564,23 @@ function renderCellContent(cell,sel){
     const e=document.createElement("div"); e.className="cell-empty-dot"; cell.appendChild(e); return;
   }
 
-  // Alleen kantoor → K label
-  if(dots.length===1 && dots[0].key==="kantoor"){
-    cell.style.background="rgba(255,255,255,0.22)"; cell.style.border="1.5px solid rgba(255,255,255,0.30)";
+  const hasKantoor   =dots.some(s=>s.key==="kantoor");
+  const hasThuis     =dots.some(s=>s.key==="thuis");
+  const hasVmVrij    =dots.some(s=>s.key==="vm_vrij");
+  const hasNmVrij    =dots.some(s=>s.key==="nm_vrij");
+  const hasVmKantoor =dots.some(s=>s.key==="vm_kantoor");
+  const hasNmKantoor =dots.some(s=>s.key==="nm_kantoor");
+  const hasVmThuis   =dots.some(s=>s.key==="vm_thuis");
+  const hasNmThuis   =dots.some(s=>s.key==="nm_thuis");
+  const needsSplit   =hasVmVrij||hasNmVrij||hasVmKantoor||hasNmKantoor||hasVmThuis||hasNmThuis;
+
+  // Hulpfunctie: klein label in de cel
+  function addLabel(txt, color){
     const lbl=document.createElement("span");
-    lbl.textContent="K"; lbl.style.cssText="font-size:10px;font-weight:700;color:rgba(255,255,255,0.35);letter-spacing:0.5px;";
-    cell.appendChild(lbl); return;
+    lbl.textContent=txt;
+    lbl.style.cssText=`font-size:10px;font-weight:700;color:${color};letter-spacing:0.5px;line-height:1;pointer-events:none;`;
+    cell.appendChild(lbl);
   }
-
-  // Achtergrond bepalen op basis van eerste niet-kantoor status
-  const dominant=dots.find(s=>s.key!=="kantoor")||dots[0];
-  cell.style.background=`${dominant.color}22`;
-  cell.style.border=`1.5px solid ${dominant.border}66`;
-
-  // Speciale weergave: halve-dag statussen → split-cel
-  const hasVmVrij=dots.some(s=>s.key==="vm_vrij");
-  const hasNmVrij=dots.some(s=>s.key==="nm_vrij");
-  const hasVmKantoor=dots.some(s=>s.key==="vm_kantoor");
-  const hasNmKantoor=dots.some(s=>s.key==="nm_kantoor");
-  const hasVmThuis=dots.some(s=>s.key==="vm_thuis");
-  const hasNmThuis=dots.some(s=>s.key==="nm_thuis");
-  const needsSplit=hasVmVrij||hasNmVrij||hasVmKantoor||hasNmKantoor||hasVmThuis||hasNmThuis;
-  const rest=dots.filter(s=>!["vm_vrij","nm_vrij","vm_kantoor","nm_kantoor","vm_thuis","nm_thuis"].includes(s.key));
 
   if(needsSplit){
     const leftColor  = hasVmVrij ? "rgba(229,57,53,0.55)" : hasVmKantoor ? "rgba(200,200,200,0.45)" : hasVmThuis ? "rgba(76,175,80,0.55)" : "rgba(255,255,255,0.04)";
@@ -593,10 +588,36 @@ function renderCellContent(cell,sel){
     const borderColor = (hasVmKantoor||hasNmKantoor) ? "rgba(200,200,200,0.4)" : (hasVmThuis||hasNmThuis) ? "rgba(76,175,80,0.5)" : "rgba(229,57,53,0.45)";
     cell.style.background = `linear-gradient(to right, ${leftColor} 50%, ${rightColor} 50%)`;
     cell.style.border = `1.5px solid ${borderColor}`;
-    // Extra bolletjes voor de rest (thuis, extern, etc.)
+    // Labels in split-cel
+    if(hasVmKantoor) addLabel("K","rgba(255,255,255,0.6)");
+    if(hasVmThuis)   addLabel("T","rgba(255,255,255,0.8)");
+    if(hasNmKantoor) addLabel("K","rgba(255,255,255,0.6)");
+    if(hasNmThuis)   addLabel("T","rgba(255,255,255,0.8)");
+    // Extra bolletjes voor andere statussen (extern, vrij-heel-dag, etc.)
+    const rest=dots.filter(s=>!["vm_vrij","nm_vrij","vm_kantoor","nm_kantoor","vm_thuis","nm_thuis","kantoor","thuis"].includes(s.key));
     rest.forEach(s=>{ cell.appendChild(makeDot(s)); });
   } else {
-    dots.forEach(s=>{ cell.appendChild(makeDot(s)); });
+    // Achtergrond bepalen op basis van dominant (niet-kantoor) status
+    const dominant=dots.find(s=>s.key!=="kantoor")||dots[0];
+    cell.style.background=`${dominant.color}22`;
+    cell.style.border=`1.5px solid ${dominant.border}66`;
+
+    // Altijd K of T tonen voor kantoor/thuis (hele dag)
+    if(hasKantoor && !hasThuis){
+      // Alleen kantoor: grijze achtergrond + K
+      cell.style.background="rgba(255,255,255,0.22)"; cell.style.border="1.5px solid rgba(255,255,255,0.30)";
+      addLabel("K","rgba(255,255,255,0.35)");
+      // Extra bolletjes voor andere statussen
+      dots.filter(s=>s.key!=="kantoor").forEach(s=>{ cell.appendChild(makeDot(s)); });
+    } else if(hasThuis && !hasKantoor){
+      // Alleen thuis: groene achtergrond + T
+      cell.style.background="rgba(76,175,80,0.18)"; cell.style.border="1.5px solid rgba(56,142,60,0.5)";
+      addLabel("T","rgba(255,255,255,0.8)");
+      dots.filter(s=>s.key!=="thuis").forEach(s=>{ cell.appendChild(makeDot(s)); });
+    } else {
+      // Overige combinaties: gewone bolletjes
+      dots.forEach(s=>{ cell.appendChild(makeDot(s)); });
+    }
   }
 }
 
