@@ -100,6 +100,7 @@ button { font-family:inherit; cursor:pointer; }
   <button class="nav-btn" id="btn-next">▶▶</button>
   <button class="nav-now nav-btn" id="btn-now">Vandaag</button>
   <button class="nav-btn" id="btn-refresh" onclick="saveState();setTimeout(()=&gt;location.reload(),300)" title="Ververs" style="font-size:14px;">↻</button>
+  <span id="lock-ind" style="font-size:11px;color:rgba(255,255,255,0.3);cursor:pointer;transition:color 0.3s;" title="Klik om te bewerken">🔒 alleen lezen</span>
   <span id="save-ind" style="font-size: 11px; opacity: 0; transition: opacity 0.3s; min-width: 20px; text-align: center; color: rgb(128, 203, 196);">✓ opgeslagen</span>
   <button class="nav-btn" id="btn-template" style="font-size:10px;padding:6px 10px;color:#60b0ff;border-color:rgba(0,150,255,0.3);background:rgba(0,100,220,0.08);width:auto;letter-spacing:1px;">★ Standaard</button>
 </div>
@@ -187,6 +188,94 @@ function loadLocal(){ try{ const r=localStorage.getItem(LS_KEY); if(!r) return f
 
 // ── GitHub sync ──────────────────────────────────────────────────
 const GH_TOKEN = ["ghp_mjsR4KRji", "gVH6DkrxUitX", "tgytlzhFj0TkyFT"].join("");
+
+// ── Beveiliging ──────────────────────────────────────────────────
+// Wachtwoord hash (SHA-256 van het wachtwoord)
+const PW_HASH = "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918"; // "admin"
+let editUnlocked = false;
+let unlockTimer = null;
+
+async function hashPassword(pw){
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(pw));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+
+function showLockIndicator(){
+  const ind = document.getElementById("lock-ind");
+  if(!ind) return;
+  if(editUnlocked){
+    ind.textContent = "🔓 bewerken aan";
+    ind.style.color = "#80cbc4";
+    ind.style.cursor = "pointer";
+    ind.title = "Klik om te vergrendelen";
+  } else {
+    ind.textContent = "🔒 alleen lezen";
+    ind.style.color = "rgba(255,255,255,0.3)";
+    ind.style.cursor = "pointer";
+    ind.title = "Klik om te bewerken";
+  }
+}
+
+function lock(){
+  editUnlocked = false;
+  clearTimeout(unlockTimer);
+  showLockIndicator();
+}
+
+async function promptUnlock(){
+  return new Promise(resolve=>{
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed;inset:0;z-index:800;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;";
+    overlay.innerHTML = `<div style="background:#111827;border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:28px 24px;min-width:280px;text-align:center;">
+      <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:6px;">🔒 Wachtwoord vereist</div>
+      <div style="font-size:11px;color:#777;margin-bottom:18px;">Voer het wachtwoord in om te bewerken</div>
+      <input id="pw-input" type="password" placeholder="Wachtwoord" autocomplete="off"
+        style="width:100%;box-sizing:border-box;background:#1a1a2e;color:#eee;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 12px;font-family:inherit;font-size:13px;margin-bottom:8px;outline:none;">
+      <div id="pw-error" style="font-size:10px;color:#f48fb1;min-height:14px;margin-bottom:10px;"></div>
+      <div style="display:flex;gap:8px;justify-content:center;">
+        <button id="pw-cancel" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#aaa;border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-family:inherit;">Annuleren</button>
+        <button id="pw-ok" style="background:rgba(128,203,196,0.15);border:1px solid rgba(128,203,196,0.4);color:#80cbc4;border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:700;">Ontgrendelen</button>
+      </div>
+    </div>`;
+    document.body.appendChild(overlay);
+    const input = overlay.querySelector("#pw-input");
+    const error = overlay.querySelector("#pw-error");
+    input.focus();
+
+    async function tryUnlock(){
+      const hash = await hashPassword(input.value);
+      if(hash === PW_HASH){
+        editUnlocked = true;
+        clearTimeout(unlockTimer);
+        // Auto-vergrendel na 15 minuten inactiviteit
+        unlockTimer = setTimeout(lock, 15 * 60 * 1000);
+        showLockIndicator();
+        overlay.remove();
+        resolve(true);
+      } else {
+        error.textContent = "Onjuist wachtwoord";
+        input.value = "";
+        input.focus();
+        resolve(false);
+      }
+    }
+
+    overlay.querySelector("#pw-ok").onclick = tryUnlock;
+    overlay.querySelector("#pw-cancel").onclick = ()=>{ overlay.remove(); resolve(false); };
+    input.addEventListener("keydown", e=>{ if(e.key==="Enter") tryUnlock(); if(e.key==="Escape"){ overlay.remove(); resolve(false); } });
+  });
+}
+
+// Controleer of bewerken is toegestaan, vraag anders wachtwoord
+async function requireUnlock(){
+  if(editUnlocked){
+    // Reset auto-lock timer bij elke actie
+    clearTimeout(unlockTimer);
+    unlockTimer = setTimeout(lock, 15 * 60 * 1000);
+    return true;
+  }
+  return await promptUnlock();
+}
 const GH_REPO  = "hansstobbe2812/teamplanning-ict";
 const GH_FILE  = "state.json";
 const GH_API   = `https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`;
@@ -500,7 +589,8 @@ let openPopup=null;
 function closePopup(){ if(openPopup){ openPopup.el.remove(); openPopup=null; } }
 document.addEventListener("click",e=>{ if(openPopup&&!openPopup.el.contains(e.target)&&!e.target.closest(".cell")) closePopup(); });
 
-function showPopup(cellWrap,monday,person,day,isTemplate){
+async function showPopup(cellWrap,monday,person,day,isTemplate){
+  if(!await requireUnlock()) return;
   closePopup();
   const popup=document.createElement("div"); popup.className="popup";
   const title=document.createElement("div"); title.className="popup-title";
@@ -869,7 +959,7 @@ function buildWeekPanel(monday){
   const yearLabel=yr!==today.getFullYear()?` ${yr}`:"";
   lbl.textContent=isCurrent?"huidige week":(isSameDay(monday,addWeeks(thisWeekMonday,1))?"volgende week":`week ${wk}${yearLabel}`);
   const resetBtn=document.createElement("button"); resetBtn.className="reset-btn"; resetBtn.textContent="↺ Reset";
-  resetBtn.addEventListener("click",e=>{ e.stopPropagation(); resetWeekToTemplate(monday); });
+  resetBtn.addEventListener("click",async e=>{ e.stopPropagation(); if(!await requireUnlock()) return; resetWeekToTemplate(monday); });
   hdr.appendChild(badge); hdr.appendChild(lbl); hdr.appendChild(resetBtn); panel.appendChild(hdr);
   const dayHdr=document.createElement("div"); dayHdr.className="day-header";
   DAYS.forEach((day,i)=>{
@@ -1003,7 +1093,13 @@ document.getElementById("btn-next").addEventListener("click",()=>{ baseMonday=ad
 document.getElementById("btn-now").addEventListener("click",()=>{ baseMonday=mondayOf(today); renderAndSync(); });
 
 const tplModal=document.getElementById("tpl-modal");
-document.getElementById("btn-template").addEventListener("click",()=>{ buildTemplateGrid(); tplModal.style.display="block"; });
+document.getElementById("btn-template").addEventListener("click",async ()=>{ if(!await requireUnlock()) return; buildTemplateGrid(); tplModal.style.display="block"; });
+
+// Slot-indicator klikbaar maken
+showLockIndicator();
+document.getElementById("lock-ind").addEventListener("click", async ()=>{
+  if(editUnlocked){ lock(); } else { await promptUnlock(); }
+});
 document.getElementById("tpl-close").addEventListener("click",()=>{ closePopup(); tplModal.style.display="none"; });
 tplModal.addEventListener("click",e=>{ if(e.target===tplModal){ closePopup(); tplModal.style.display="none"; } });
 
