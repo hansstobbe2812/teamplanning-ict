@@ -276,16 +276,17 @@ async function requireUnlock(){
   }
   return await promptUnlock();
 }
-const GH_REPO  = "hansstobbe2812/teamplanning-ict";
-const GH_FILE  = "state.json";
-const GH_API   = `https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`;
+const GH_REPO   = "hansstobbe2812/teamplanning-ict";
+const GH_BRANCH = "data";   // aparte branch → geen Pages deployment bij elke save
+const GH_FILE   = "state.json";
+const GH_API    = `https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}?ref=${GH_BRANCH}`;
 let ghSha = null;
 let ghSaveTimer = null;
 let ghSaving = false;
 
 async function loadFromGitHub(){
   try{
-    const r = await fetch(GH_API + "?t=" + Date.now(), {
+    const r = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}?ref=${GH_BRANCH}&t=` + Date.now(), {
       headers:{"Authorization":`token ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}
     });
     if(!r.ok){ console.warn("GitHub laden HTTP:", r.status); return false; }
@@ -309,13 +310,12 @@ function encodeBase64(str){
 // Helper: PUT een bestand naar GitHub (maakt aan of overschrijft)
 async function ghPut(path, content, message){
   const url = `https://api.github.com/repos/${GH_REPO}/contents/${path}`;
-  // Haal SHA op als het bestand al bestaat
   let sha = undefined;
   try{
-    const r = await fetch(url + "?t=" + Date.now(), {headers:{"Authorization":`token ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}});
+    const r = await fetch(url + `?ref=${GH_BRANCH}&t=` + Date.now(), {headers:{"Authorization":`token ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}});
     if(r.ok){ const d = await r.json(); sha = d.sha; }
   }catch(e){}
-  const body = {message, content, ...(sha ? {sha} : {})};
+  const body = {message, content, branch: GH_BRANCH, ...(sha ? {sha} : {})};
   return fetch(url, {method:"PUT", headers:{"Authorization":`token ${GH_TOKEN}`,"Content-Type":"application/json","Accept":"application/vnd.github.v3+json"}, body:JSON.stringify(body)});
 }
 
@@ -330,7 +330,7 @@ async function maybeBackup(stateJson){
   // Verwijder backups ouder dan 14 dagen (fire-and-forget)
   try{
     const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 14);
-    const listR = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/backups?t=` + Date.now(), {headers:{"Authorization":`token ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}});
+    const listR = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/backups?ref=${GH_BRANCH}&t=` + Date.now(), {headers:{"Authorization":`token ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}});
     if(listR.ok){
       const files = await listR.json();
       for(const f of files){
@@ -339,7 +339,7 @@ async function maybeBackup(stateJson){
           fetch(`https://api.github.com/repos/${GH_REPO}/contents/backups/${f.name}`, {
             method:"DELETE",
             headers:{"Authorization":`token ${GH_TOKEN}`,"Content-Type":"application/json","Accept":"application/vnd.github.v3+json"},
-            body: JSON.stringify({message:`Verwijder oude backup ${d}`, sha: f.sha})
+            body: JSON.stringify({message:`Verwijder oude backup ${d}`, sha: f.sha, branch: GH_BRANCH})
           }).catch(()=>{});
         }
       }
@@ -352,7 +352,7 @@ async function saveToGitHub(){
   ghSaving = true;
   try{
     // Haal altijd eerst de actuele SHA op om conflicts te voorkomen
-    const check = await fetch(GH_API + "?t=" + Date.now(), {
+    const check = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}?ref=${GH_BRANCH}&t=`+Date.now(), {
       headers:{"Authorization":`token ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}
     });
     if(check.ok){ const cd = await check.json(); ghSha = cd.sha; }
@@ -360,8 +360,8 @@ async function saveToGitHub(){
     const json = JSON.stringify(serializeState());
     const content = encodeBase64(json);
 
-    const body = {message:"Update planning", content, sha: ghSha};
-    const r = await fetch(GH_API, {
+    const body = {message:"Update planning", content, sha: ghSha, branch: GH_BRANCH};
+    const r = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`, {
       method:"PUT",
       headers:{"Authorization":`token ${GH_TOKEN}`,"Content-Type":"application/json","Accept":"application/vnd.github.v3+json"},
       body: JSON.stringify(body)
@@ -1109,7 +1109,7 @@ document.getElementById("btn-restore-backup").addEventListener("click", async ()
   btn.textContent = "⟳ laden...";
   btn.disabled = true;
   try{
-    const r = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/backups?t=`+Date.now(),
+    const r = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/backups?ref=${GH_BRANCH}&t=`+Date.now(),
       {headers:{"Authorization":`token ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}});
     if(!r.ok){ alert("Kon backups niet laden ("+r.status+")"); return; }
     const files = await r.json();
