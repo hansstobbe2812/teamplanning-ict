@@ -289,11 +289,20 @@ let ghSha = null;
 let ghSaveTimer = null;
 let ghSaving = false;
 
-async function loadFromGitHub(){
+// Prefetch: start state.json fetch meteen bij script-parse, vóór DOM-init
+// Zo wacht loadFromGitHub niet op netwerk maar pikt het lopende verzoek op
+const _prefetchState = fetch(
+  `https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}?ref=${GH_BRANCH}&t=`+Date.now(),
+  {headers:{"Authorization":`Bearer ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}}
+);
+
+async function loadFromGitHub(usePrefetch=false){
   try{
-    const r = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}?ref=${GH_BRANCH}&t=` + Date.now(), {
-      headers:{"Authorization":`Bearer ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}
-    });
+    // Gebruik prefetch-promise als die nog loopt (eerste load), anders nieuw verzoek
+    const r = await (usePrefetch ? _prefetchState : fetch(
+      `https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}?ref=${GH_BRANCH}&t=`+Date.now(),
+      {headers:{"Authorization":`Bearer ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}}
+    ));
     if(!r.ok){ console.warn("GitHub laden HTTP:", r.status); return false; }
     const d = await r.json();
     ghSha = d.sha;
@@ -409,7 +418,19 @@ async function saveToGitHub(){
       HEALTH.github = "ok"; HEALTH.lastSync = Date.now(); HEALTH.lastSyncOk = true;
       updateHealthBar();
       showSaveStatus("ok");
-      // Dagelijkse backup (silent, na succesvolle save)
+      // Prefetch SHA alvast voor volgende save (tijdens rustige periode)
+      setTimeout(async ()=>{
+        if(!ghSaving){
+          try{
+            const pre = await fetch(
+              `https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}?ref=${GH_BRANCH}&t=`+Date.now(),
+              {headers:{"Authorization":`Bearer ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}}
+            );
+            if(pre.ok){ const pd = await pre.json(); ghSha = pd.sha; }
+          }catch(e){}
+        }
+      }, 2000);
+      // Backup (silent, na succesvolle save)
       maybeBackup(json);
     } else {
       const err = await r.json().catch(()=>({}));
@@ -718,7 +739,7 @@ function propagateTemplateToAll(){
 }
 // Laad staat: GitHub heeft prioriteit, dan localStorage, dan data-store tag
 (async ()=>{
-  const ghLoaded = await loadFromGitHub();
+  const ghLoaded = await loadFromGitHub(true); // gebruik prefetch
   if(!ghLoaded){
     // Geen localStorage fallback — GitHub is de enige bron van waarheid
     // Verwijder eventuele oude localStorage data
