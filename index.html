@@ -295,37 +295,6 @@ const _prefetchState = fetch(
   {headers:{"Authorization":`Bearer ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}}
 );
 
-// Prefetch backup listing om laatste backup-tijd te tonen in health bar
-const _prefetchBackups = fetch(
-  `https://api.github.com/repos/${GH_REPO}/contents/backups?ref=${GH_BRANCH}&t=`+Date.now(),
-  {headers:{"Authorization":`Bearer ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}}
-).then(async r=>{
-  if(!r.ok) return;
-  const files = await r.json();
-  if(!Array.isArray(files) || !files.length) return;
-  // Sorteer op naam (bevat datum+tijd) en pak de nieuwste
-  const newest = files.filter(f=>f.name.endsWith(".json"))
-                      .sort((a,b)=>b.name.localeCompare(a.name))[0];
-  if(!newest) return;
-  // Naam is bijv. "2026-07-13_12-30.json" → parse datum+tijd direct uit naam
-  const raw = newest.name.replace(".json",""); // "2026-07-13_12-30" of "2026-07-13"
-  let ts = NaN;
-  if(raw.length >= 16){
-    // "2026-07-13_12-30" → jaar, maand, dag, uur, minuut
-    const [datePart, timePart] = raw.split("_");
-    const [yr,mo,dy] = datePart.split("-").map(Number);
-    const [hr,mn] = timePart.split("-").map(Number);
-    ts = new Date(yr, mo-1, dy, hr, mn, 0).getTime(); // lokale tijd
-  } else {
-    const [yr,mo,dy] = raw.split("-").map(Number);
-    ts = new Date(yr, mo-1, dy, 0, 0, 0).getTime();
-  }
-  if(!isNaN(ts)){
-    HEALTH.lastBackup = ts;
-    HEALTH.lastBackupOk = true;
-    updateHealthBar();
-  }
-}).catch(()=>{});
 
 async function loadFromGitHub(usePrefetch=false){
   try{
@@ -620,6 +589,35 @@ function updateHealthBar(){
 
 // Update health bar elke 10 seconden
 setInterval(updateHealthBar, 10000);
+
+// Laad laatste backup-tijd van GitHub bij opstarten (na HEALTH + updateHealthBar definitie)
+fetch(
+  `https://api.github.com/repos/${GH_REPO}/contents/backups?ref=${GH_BRANCH}&t=`+Date.now(),
+  {headers:{"Authorization":`Bearer ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}}
+).then(async r=>{
+  if(!r.ok) return;
+  const files = await r.json();
+  if(!Array.isArray(files) || !files.length) return;
+  const newest = files.filter(f=>f.name.endsWith(".json"))
+                      .sort((a,b)=>b.name.localeCompare(a.name))[0];
+  if(!newest) return;
+  const raw = newest.name.replace(".json","");
+  let ts = NaN;
+  if(raw.length >= 16){
+    const [datePart, timePart] = raw.split("_");
+    const [yr,mo,dy] = datePart.split("-").map(Number);
+    const [hr,mn] = timePart.split("-").map(Number);
+    ts = new Date(yr, mo-1, dy, hr, mn, 0).getTime();
+  } else {
+    const [yr,mo,dy] = raw.split("-").map(Number);
+    ts = new Date(yr, mo-1, dy, 0, 0, 0).getTime();
+  }
+  if(!isNaN(ts)){
+    HEALTH.lastBackup = ts;
+    HEALTH.lastBackupOk = true;
+    updateHealthBar();
+  }
+}).catch(()=>{});
 
 // ── Template ─────────────────────────────────────────────────────
 const template = {};
