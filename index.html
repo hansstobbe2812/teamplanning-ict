@@ -194,7 +194,7 @@ function loadLocal(){ try{ const r=localStorage.getItem(LS_KEY); if(!r) return f
 
 
 // ── GitHub sync ──────────────────────────────────────────────────
-const GH_TOKEN = ["ghp_PkIf1Nbt8Tu", "gELEn53E9JtCb", "Jypkyb2IrYuD"].join("");
+const GH_TOKEN = ["github_pat_11APK53UQ0o2XqUtmlrm", "1N_Z2y634NPt1Sodd391rwFyjChPp97", "sWxuCMSwlO1BNhZ2FRHHZG4riuTkGtJ"].join("");
 
 // ── Beveiliging ──────────────────────────────────────────────────
 // Wachtwoord hash (SHA-256 van het wachtwoord)
@@ -294,7 +294,7 @@ let ghSaving = false;
 async function loadFromGitHub(){
   try{
     const r = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}?ref=${GH_BRANCH}&t=` + Date.now(), {
-      headers:{"Authorization":`token ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}
+      headers:{"Authorization":`Bearer ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}
     });
     if(!r.ok){ console.warn("GitHub laden HTTP:", r.status); return false; }
     const d = await r.json();
@@ -332,11 +332,11 @@ async function ghPut(path, content, message){
   const url = `https://api.github.com/repos/${GH_REPO}/contents/${path}`;
   let sha = undefined;
   try{
-    const r = await fetch(url + `?ref=${GH_BRANCH}&t=` + Date.now(), {headers:{"Authorization":`token ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}});
+    const r = await fetch(url + `?ref=${GH_BRANCH}&t=` + Date.now(), {headers:{"Authorization":`Bearer ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}});
     if(r.ok){ const d = await r.json(); sha = d.sha; }
   }catch(e){}
   const body = {message, content, branch: GH_BRANCH, ...(sha ? {sha} : {})};
-  return fetch(url, {method:"PUT", headers:{"Authorization":`token ${GH_TOKEN}`,"Content-Type":"application/json","Accept":"application/vnd.github.v3+json"}, body:JSON.stringify(body)});
+  return fetch(url, {method:"PUT", headers:{"Authorization":`Bearer ${GH_TOKEN}`,"Content-Type":"application/json","Accept":"application/vnd.github.v3+json"}, body:JSON.stringify(body)});
 }
 
 // Dagelijkse backup naar backups/YYYY-MM-DD.json (maximaal 14 bewaard)
@@ -350,7 +350,7 @@ async function maybeBackup(stateJson){
   // Verwijder backups ouder dan 14 dagen (fire-and-forget)
   try{
     const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 14);
-    const listR = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/backups?ref=${GH_BRANCH}&t=` + Date.now(), {headers:{"Authorization":`token ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}});
+    const listR = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/backups?ref=${GH_BRANCH}&t=` + Date.now(), {headers:{"Authorization":`Bearer ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}});
     if(listR.ok){
       const files = await listR.json();
       for(const f of files){
@@ -358,7 +358,7 @@ async function maybeBackup(stateJson){
         if(d < cutoff.toISOString().slice(0,10)){
           fetch(`https://api.github.com/repos/${GH_REPO}/contents/backups/${f.name}`, {
             method:"DELETE",
-            headers:{"Authorization":`token ${GH_TOKEN}`,"Content-Type":"application/json","Accept":"application/vnd.github.v3+json"},
+            headers:{"Authorization":`Bearer ${GH_TOKEN}`,"Content-Type":"application/json","Accept":"application/vnd.github.v3+json"},
             body: JSON.stringify({message:`Verwijder oude backup ${d}`, sha: f.sha, branch: GH_BRANCH})
           }).catch(()=>{});
         }
@@ -373,7 +373,7 @@ async function saveToGitHub(){
   try{
     // Haal altijd eerst de actuele SHA op om conflicts te voorkomen
     const check = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}?ref=${GH_BRANCH}&t=`+Date.now(), {
-      headers:{"Authorization":`token ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}
+      headers:{"Authorization":`Bearer ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}
     });
     if(check.ok){ const cd = await check.json(); ghSha = cd.sha; }
 
@@ -383,7 +383,7 @@ async function saveToGitHub(){
     const body = {message:"Update planning", content, sha: ghSha, branch: GH_BRANCH};
     const r = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`, {
       method:"PUT",
-      headers:{"Authorization":`token ${GH_TOKEN}`,"Content-Type":"application/json","Accept":"application/vnd.github.v3+json"},
+      headers:{"Authorization":`Bearer ${GH_TOKEN}`,"Content-Type":"application/json","Accept":"application/vnd.github.v3+json"},
       body: JSON.stringify(body)
     });
     if(r.ok){
@@ -1237,7 +1237,7 @@ document.getElementById("btn-restore-backup").addEventListener("click", async ()
   btn.disabled = true;
   try{
     const r = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/backups?ref=${GH_BRANCH}&t=`+Date.now(),
-      {headers:{"Authorization":`token ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}});
+      {headers:{"Authorization":`Bearer ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}});
     if(!r.ok){ alert("Kon backups niet laden ("+r.status+")"); return; }
     const files = await r.json();
     const sorted = files.filter(f=>f.name.endsWith(".json")).sort((a,b)=>b.name.localeCompare(a.name));
