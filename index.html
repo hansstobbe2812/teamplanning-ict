@@ -1198,13 +1198,20 @@ function buildWeekPanel(monday){
 
     const beheerOpK  = MUST_KANTOOR.filter(isPersonOnKantoor);
     const beheerHasData = MUST_KANTOOR.some(hasData);
+    // Iemand op kantoor 's ochtends of 's middags?
+    const beheerVmK = MUST_KANTOOR.some(p=>{ const s=(dayData[p]||{})[day]||[]; return s.includes("kantoor")||s.includes("vm_kantoor"); });
+    const beheerNmK = MUST_KANTOOR.some(p=>{ const s=(dayData[p]||{})[day]||[]; return s.includes("kantoor")||s.includes("nm_kantoor"); });
+    const beheerFullyCovered = beheerVmK && beheerNmK;
     const beheerAlleenThuis = beheerOpK.length===0 && MUST_KANTOOR.some(isPersonThuis) && beheerHasData;
-    const showBeheerWarn = beheerOpK.length===0 && beheerHasData;
+    const showBeheerWarn = !beheerFullyCovered && beheerHasData;
 
     const supportOpK = SUPPORT_GRP.filter(isPersonOnKantoor);
     const supportHasData = SUPPORT_GRP.some(hasData);
+    const supportVmK = SUPPORT_GRP.some(p=>{ const s=(dayData[p]||{})[day]||[]; return s.includes("kantoor")||s.includes("vm_kantoor"); });
+    const supportNmK = SUPPORT_GRP.some(p=>{ const s=(dayData[p]||{})[day]||[]; return s.includes("kantoor")||s.includes("nm_kantoor"); });
+    const supportFullyCovered = supportVmK && supportNmK;
     const supportAlleenThuis = supportOpK.length===0 && SUPPORT_GRP.some(isPersonThuis) && supportHasData;
-    const showSupportWarn = supportOpK.length===0 && supportHasData;
+    const showSupportWarn = !supportFullyCovered && supportHasData;
 
     // Kleur: oranje = alleen thuis, rood = helemaal weg
     const beheerColor  = beheerAlleenThuis  ? "rgba(255,183,77,0.35)"  : "rgba(229,57,53,0.5)";
@@ -1215,14 +1222,14 @@ function buildWeekPanel(monday){
     else if(showSupportWarn) dh.style.cssText=`background:rgba(255,183,77,0.08);border-radius:6px;outline:1.5px solid ${supportColor};`;
     // Bepaal tijdstip van afwezigheid (heel dag / smorgens / smiddags)
     const whenAbsent = (group) => {
-      const vmK = group.filter(p=>{ const s=(dayData[p]||{})[day]||[]; return s.includes("vm_kantoor")||s.includes("kantoor"); });
-      const nmK = group.filter(p=>{ const s=(dayData[p]||{})[day]||[]; return s.includes("nm_kantoor")||s.includes("kantoor"); });
-      const anyVm = group.some(p=>{ const s=(dayData[p]||{})[day]||[]; return s.some(k=>k.startsWith("vm_")||k==="kantoor"||k==="thuis"||k==="vrij"); });
-      const anyNm = group.some(p=>{ const s=(dayData[p]||{})[day]||[]; return s.some(k=>k.startsWith("nm_")||k==="kantoor"||k==="thuis"||k==="vrij"); });
-      if(vmK.length===0 && nmK.length===0) return "hele dag";
-      if(vmK.length===0 && anyVm) return "'s ochtends";
-      if(nmK.length===0 && anyNm) return "'s middags";
-      return "hele dag";
+      // Iemand op kantoor 's ochtends = kantoor, vm_kantoor
+      const vmKantoor = group.some(p=>{ const s=(dayData[p]||{})[day]||[]; return s.includes("kantoor")||s.includes("vm_kantoor"); });
+      // Iemand op kantoor 's middags = kantoor, nm_kantoor
+      const nmKantoor = group.some(p=>{ const s=(dayData[p]||{})[day]||[]; return s.includes("kantoor")||s.includes("nm_kantoor"); });
+      if(!vmKantoor && !nmKantoor) return "hele dag";
+      if(!vmKantoor) return "'s ochtends";
+      if(!nmKantoor) return "'s middags";
+      return ""; // beide helften gedekt — geen waarschuwing nodig
     };
     const beheerWhen  = showBeheerWarn  ? whenAbsent(MUST_KANTOOR) : "";
     const supportWhen = showSupportWarn ? whenAbsent(SUPPORT_GRP)  : "";
@@ -1404,15 +1411,13 @@ function showGeenBeheerModal(){
         const d = addDays(monday, i);
         // Tijdstip bepalen
         const whenAbsentModal = (group, onK) => {
-          if(onK.length > 0) return "";
-          const vmK = group.filter(p=>{ const s=(getData(monday)[p]||{})[day]||[]; return s.includes("vm_kantoor")||s.includes("kantoor"); });
-          const nmK = group.filter(p=>{ const s=(getData(monday)[p]||{})[day]||[]; return s.includes("nm_kantoor")||s.includes("kantoor"); });
-          const anyVm = group.some(p=>{ const s=(getData(monday)[p]||{})[day]||[]; return s.some(k=>k.startsWith("vm_")||k==="kantoor"||k==="thuis"||k==="vrij"); });
-          const anyNm = group.some(p=>{ const s=(getData(monday)[p]||{})[day]||[]; return s.some(k=>k.startsWith("nm_")||k==="kantoor"||k==="thuis"||k==="vrij"); });
-          if(vmK.length===0 && nmK.length===0) return "hele dag";
-          if(vmK.length===0 && anyVm) return "'s ochtends";
-          if(nmK.length===0 && anyNm) return "'s middags";
-          return "hele dag";
+          const dayD = getData(monday);
+          const vmKantoor = group.some(p=>{ const s=(dayD[p]||{})[day]||[]; return s.includes("kantoor")||s.includes("vm_kantoor"); });
+          const nmKantoor = group.some(p=>{ const s=(dayD[p]||{})[day]||[]; return s.includes("kantoor")||s.includes("nm_kantoor"); });
+          if(!vmKantoor && !nmKantoor) return "hele dag";
+          if(!vmKantoor) return "'s ochtends";
+          if(!nmKantoor) return "'s middags";
+          return "";
         };
         results.push({
           label: `${DAY_NAMES[day]} ${d.getDate()} ${["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"][d.getMonth()]}`,
