@@ -573,12 +573,16 @@ function updateHealthBar(){
       const bSecAgo = Math.round((Date.now()-HEALTH.lastBackup)/1000);
       const bState = HEALTH.lastBackupOk ? (bSecAgo < 20*60 ? "ok" : "warn") : "error";
       elBackup.style.color = dot(bState);
-      const bAgo = bSecAgo < 60 ? bSecAgo+"s" : bSecAgo < 3600 ? Math.round(bSecAgo/60)+"m" : Math.round(bSecAgo/3600)+"u";
-      elBackup.title = (HEALTH.lastBackupOk ? "Backup OK" : "Backup mislukt") + " — "+bAgo+" geleden";
-      el.detail.textContent += (HEALTH.lastBackupOk ? "  backup ✓ " : "  backup ✗ ") + bAgo+" geleden";
+      const bDt = new Date(HEALTH.lastBackup);
+      const bDate = bDt.toLocaleDateString("nl-NL",{day:"2-digit",month:"2-digit"});
+      const bTime = bDt.toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"});
+      const bLabel = `${bDate} ${bTime}`;
+      elBackup.title = (HEALTH.lastBackupOk ? "Backup OK" : "Backup mislukt") + ` — ${bLabel}`;
+      el.detail.textContent += (HEALTH.lastBackupOk ? "  backup ✓ " : "  backup ✗ ") + bLabel;
     } else {
       elBackup.style.color = dot("unknown");
       elBackup.title = "Nog geen backup gemaakt";
+      el.detail.textContent += "  backup: nog geen";
     }
   }
 }
