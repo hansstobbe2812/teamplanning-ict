@@ -369,6 +369,8 @@ async function maybeBackup(stateJson){
   if(backupResult && backupResult.ok){
     HEALTH.lastBackup = now;
     HEALTH.lastBackupOk = true;
+    HEALTH.lastBackupLabel = now_dt.toLocaleDateString("nl-NL",{day:"2-digit",month:"2-digit"})+" "+
+                             now_dt.toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"});
   } else {
     HEALTH.lastBackupOk = false;
   }
@@ -531,7 +533,7 @@ function hideSyncErrorBanner(){
 }
 
 // ── Health status ─────────────────────────────────────────────────
-const HEALTH = { github: "unknown", data: "unknown", lastSync: null, lastSyncOk: false, lastBackup: null, lastBackupOk: false };
+const HEALTH = { github: "unknown", data: "unknown", lastSync: null, lastSyncOk: false, lastBackup: null, lastBackupOk: false, lastBackupLabel: null };
 
 function updateHealthBar(){
   const el = {
@@ -573,10 +575,11 @@ function updateHealthBar(){
       const bSecAgo = Math.round((Date.now()-HEALTH.lastBackup)/1000);
       const bState = HEALTH.lastBackupOk ? (bSecAgo < 20*60 ? "ok" : "warn") : "error";
       elBackup.style.color = dot(bState);
-      const bDt = new Date(HEALTH.lastBackup);
-      const bDate = bDt.toLocaleDateString("nl-NL",{day:"2-digit",month:"2-digit"});
-      const bTime = bDt.toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"});
-      const bLabel = `${bDate} ${bTime}`;
+      const bLabel = HEALTH.lastBackupLabel || (() => {
+        const bDt = new Date(HEALTH.lastBackup);
+        return bDt.toLocaleDateString("nl-NL",{day:"2-digit",month:"2-digit"})+" "+
+               bDt.toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"});
+      })();
       elBackup.title = (HEALTH.lastBackupOk ? "Backup OK" : "Backup mislukt") + ` — ${bLabel}`;
       el.detail.textContent += (HEALTH.lastBackupOk ? "  backup ✓ " : "  backup ✗ ") + bLabel;
     } else {
@@ -590,7 +593,7 @@ function updateHealthBar(){
 // Update health bar elke 10 seconden
 setInterval(updateHealthBar, 10000);
 
-// Laad laatste backup-tijd van GitHub bij opstarten (na HEALTH + updateHealthBar definitie)
+// Laad laatste backup-tijd van GitHub bij opstarten
 fetch(
   `https://api.github.com/repos/${GH_REPO}/contents/backups?ref=${GH_BRANCH}&t=`+Date.now(),
   {headers:{"Authorization":`Bearer ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}}
@@ -601,22 +604,15 @@ fetch(
   const newest = files.filter(f=>f.name.endsWith(".json"))
                       .sort((a,b)=>b.name.localeCompare(a.name))[0];
   if(!newest) return;
-  const raw = newest.name.replace(".json","");
-  let ts = NaN;
-  if(raw.length >= 16){
-    const [datePart, timePart] = raw.split("_");
-    const [yr,mo,dy] = datePart.split("-").map(Number);
-    const [hr,mn] = timePart.split("-").map(Number);
-    ts = new Date(yr, mo-1, dy, hr, mn, 0).getTime();
-  } else {
-    const [yr,mo,dy] = raw.split("-").map(Number);
-    ts = new Date(yr, mo-1, dy, 0, 0, 0).getTime();
-  }
-  if(!isNaN(ts)){
-    HEALTH.lastBackup = ts;
-    HEALTH.lastBackupOk = true;
-    updateHealthBar();
-  }
+  // Gebruik bestandsnaam direct als leesbare string, geen Date-parsing
+  const raw = newest.name.replace(".json",""); // "2026-07-13_12-30" of "2026-07-13"
+  const label = raw.length >= 16
+    ? raw.slice(8,10)+"-"+raw.slice(5,7)+" "+raw.slice(11,16).replace("-",":")
+    : raw.slice(8,10)+"-"+raw.slice(5,7);
+  HEALTH.lastBackupLabel = label;
+  HEALTH.lastBackupOk = true;
+  HEALTH.lastBackup = Date.now(); // voor kleur-berekening (groen)
+  updateHealthBar();
 }).catch(()=>{});
 
 // ── Template ─────────────────────────────────────────────────────
