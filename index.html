@@ -294,7 +294,11 @@ async function loadFromGitHub(){
     ghSha = d.sha;
     const text = atob(d.content.replace(/\n/g,""));
     const data = JSON.parse(text);
-    if(data && data.store){ applyState(data); return true; }
+    if(data && data.store && data.team && data.team.length > 0){
+      applyState(data); return true;
+    } else {
+      console.warn("GitHub: state leeg of ongeldig, wordt genegeerd");
+    }
   }catch(e){ console.warn("GitHub laden mislukt:", e); }
   return false;
 }
