@@ -374,8 +374,16 @@ async function saveToGitHub(){
       maybeBackup(json);
     } else {
       const err = await r.json().catch(()=>({}));
-      console.warn("GitHub opslaan mislukt:", r.status, err.message);
-      showSaveStatus("error");
+      const msg = err.message || err.errors?.[0]?.message || r.status;
+      console.error("GitHub opslaan mislukt:", r.status, msg);
+      // Bij 409 conflict: SHA ophalen en opnieuw proberen
+      if(r.status === 409){
+        console.warn("SHA conflict, opnieuw proberen...");
+        ghSha = null;
+        ghSaveTimer = setTimeout(saveToGitHub, 2000);
+      } else {
+        showSaveStatus("error: "+msg);
+      }
     }
   }catch(e){
     console.warn("GitHub opslaan fout:", e);
