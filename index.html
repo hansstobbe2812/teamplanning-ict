@@ -290,11 +290,35 @@ let ghSaveTimer = null;
 let ghSaving = false;
 
 // Prefetch: start state.json fetch meteen bij script-parse, vóór DOM-init
-// Zo wacht loadFromGitHub niet op netwerk maar pikt het lopende verzoek op
 const _prefetchState = fetch(
   `https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}?ref=${GH_BRANCH}&t=`+Date.now(),
   {headers:{"Authorization":`Bearer ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}}
 );
+
+// Prefetch backup listing om laatste backup-tijd te tonen in health bar
+const _prefetchBackups = fetch(
+  `https://api.github.com/repos/${GH_REPO}/contents/backups?ref=${GH_BRANCH}&t=`+Date.now(),
+  {headers:{"Authorization":`Bearer ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}}
+).then(async r=>{
+  if(!r.ok) return;
+  const files = await r.json();
+  if(!Array.isArray(files) || !files.length) return;
+  // Sorteer op naam (bevat datum+tijd) en pak de nieuwste
+  const newest = files.filter(f=>f.name.endsWith(".json"))
+                      .sort((a,b)=>b.name.localeCompare(a.name))[0];
+  if(!newest) return;
+  // Naam is bijv. "2026-07-13_12-30.json" → parse naar timestamp
+  const raw = newest.name.replace(".json",""); // "2026-07-13_12-30" of "2026-07-13"
+  const isoStr = raw.length >= 16
+    ? raw.slice(0,10)+"T"+raw.slice(11,16).replace("-",":")+":00"
+    : raw+"T00:00:00";
+  const ts = new Date(isoStr).getTime();
+  if(!isNaN(ts)){
+    HEALTH.lastBackup = ts;
+    HEALTH.lastBackupOk = true;
+    updateHealthBar();
+  }
+}).catch(()=>{});
 
 async function loadFromGitHub(usePrefetch=false){
   try{
