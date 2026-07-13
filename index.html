@@ -339,14 +339,26 @@ async function ghPut(path, content, message){
   return fetch(url, {method:"PUT", headers:{"Authorization":`Bearer ${GH_TOKEN}`,"Content-Type":"application/json","Accept":"application/vnd.github.v3+json"}, body:JSON.stringify(body)});
 }
 
-// Dagelijkse backup naar backups/YYYY-MM-DD.json (maximaal 14 bewaard)
-let lastBackupDate = null;
+// Backup elke 10 minuten na een wijziging (maximaal 14 dagen bewaard)
+let lastBackupJson = null;   // staat bij vorige backup
+let lastBackupTime = 0;      // timestamp vorige backup
+const BACKUP_INTERVAL = 10 * 60 * 1000; // 10 minuten
+
 async function maybeBackup(stateJson){
-  const today = new Date().toISOString().slice(0,10); // YYYY-MM-DD
-  if(lastBackupDate === today) return; // al gedaan vandaag
-  lastBackupDate = today;
+  const now = Date.now();
+  // Sla alleen op als: er iets gewijzigd is én 10 min verstreken zijn
+  if(stateJson === lastBackupJson) return; // niets gewijzigd
+  if(now - lastBackupTime < BACKUP_INTERVAL) return; // nog geen 10 min
+
+  lastBackupJson = stateJson;
+  lastBackupTime = now;
+
+  const now_dt = new Date();
+  const date = now_dt.toISOString().slice(0,10);
+  const time = now_dt.toTimeString().slice(0,5).replace(":","-");
+  const filename = `${date}_${time}`;
   const content = encodeBase64(stateJson);
-  await ghPut(`backups/${today}.json`, content, `Backup ${today}`).catch(()=>{});
+  await ghPut(`backups/${filename}.json`, content, `Auto-backup ${filename}`).catch(()=>{});
   // Verwijder backups ouder dan 14 dagen (fire-and-forget)
   try{
     const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 14);
@@ -354,7 +366,7 @@ async function maybeBackup(stateJson){
     if(listR.ok){
       const files = await listR.json();
       for(const f of files){
-        const d = f.name.replace(".json","");
+        const d = f.name.replace(".json","").slice(0,10); // YYYY-MM-DD prefix
         if(d < cutoff.toISOString().slice(0,10)){
           fetch(`https://api.github.com/repos/${GH_REPO}/contents/backups/${f.name}`, {
             method:"DELETE",
