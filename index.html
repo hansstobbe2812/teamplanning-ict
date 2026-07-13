@@ -1213,9 +1213,23 @@ function buildWeekPanel(monday){
     if(showBeheerWarn && showSupportWarn)     dh.style.cssText=`background:rgba(229,57,53,0.15);border-radius:6px;outline:2px solid ${beheerColor};`;
     else if(showBeheerWarn)  dh.style.cssText=`background:rgba(229,57,53,0.10);border-radius:6px;outline:1.5px solid ${beheerColor};`;
     else if(showSupportWarn) dh.style.cssText=`background:rgba(255,183,77,0.08);border-radius:6px;outline:1.5px solid ${supportColor};`;
+    // Bepaal tijdstip van afwezigheid (heel dag / smorgens / smiddags)
+    const whenAbsent = (group) => {
+      const vmK = group.filter(p=>{ const s=(dayData[p]||{})[day]||[]; return s.includes("vm_kantoor")||s.includes("kantoor"); });
+      const nmK = group.filter(p=>{ const s=(dayData[p]||{})[day]||[]; return s.includes("nm_kantoor")||s.includes("kantoor"); });
+      const anyVm = group.some(p=>{ const s=(dayData[p]||{})[day]||[]; return s.some(k=>k.startsWith("vm_")||k==="kantoor"||k==="thuis"||k==="vrij"); });
+      const anyNm = group.some(p=>{ const s=(dayData[p]||{})[day]||[]; return s.some(k=>k.startsWith("nm_")||k==="kantoor"||k==="thuis"||k==="vrij"); });
+      if(vmK.length===0 && nmK.length===0) return "hele dag";
+      if(vmK.length===0 && anyVm) return "'s ochtends";
+      if(nmK.length===0 && anyNm) return "'s middags";
+      return "hele dag";
+    };
+    const beheerWhen  = showBeheerWarn  ? whenAbsent(MUST_KANTOOR) : "";
+    const supportWhen = showSupportWarn ? whenAbsent(SUPPORT_GRP)  : "";
+
     const warnHtml = [
-      showBeheerWarn  ? `<div style="font-size:8px;color:${beheerAlleenThuis?"#ffb74d":"#f48fb1"};font-weight:700;letter-spacing:0.3px;margin-top:1px;" title="${beheerAlleenThuis?"Beheer alleen thuis":"Geen beheer op kantoor"}">${beheerAlleenThuis?"🏠 beheer thuis":"✗ geen beheer"}</div>` : "",
-      showSupportWarn ? `<div style="font-size:8px;color:${supportAlleenThuis?"#ffb74d":"#f48fb1"};font-weight:700;letter-spacing:0.3px;margin-top:1px;" title="${supportAlleenThuis?"Support alleen thuis":"Geen support op kantoor"}">${supportAlleenThuis?"🏠 support thuis":"✗ geen support"}</div>` : ""
+      showBeheerWarn  ? `<div style="font-size:8px;color:${beheerAlleenThuis?"#ffb74d":"#f48fb1"};font-weight:700;letter-spacing:0.3px;margin-top:1px;" title="${beheerAlleenThuis?"Beheer alleen thuis":"Geen beheer op kantoor"} (${beheerWhen})">${beheerAlleenThuis?"🏠":"✗"} beheer ${beheerWhen}</div>` : "",
+      showSupportWarn ? `<div style="font-size:8px;color:${supportAlleenThuis?"#ffb74d":"#f48fb1"};font-weight:700;letter-spacing:0.3px;margin-top:1px;" title="${supportAlleenThuis?"Support alleen thuis":"Geen support op kantoor"} (${supportWhen})">${supportAlleenThuis?"🏠":"✗"} support ${supportWhen}</div>` : ""
     ].join("");
     dh.innerHTML=`<div class="day-hd-name${isToday?" today-col":""}">${day}</div><div class="day-hd-date${isToday?" today-col":""}">${fmtDate(dayDate)}</div>${isToday?`<div class="today-badge">vandaag</div>`:""}${warnHtml || `<div class="day-hd-count" id="cnt-${weekKey(monday)}-${day}" style="color:${col}">${n>0?n+"×":""}</div>`}`;
     dayHdr.appendChild(dh);
@@ -1388,10 +1402,24 @@ function showGeenBeheerModal(){
 
       if(geenBeheer || geenSupport){
         const d = addDays(monday, i);
+        // Tijdstip bepalen
+        const whenAbsentModal = (group, onK) => {
+          if(onK.length > 0) return "";
+          const vmK = group.filter(p=>{ const s=(getData(monday)[p]||{})[day]||[]; return s.includes("vm_kantoor")||s.includes("kantoor"); });
+          const nmK = group.filter(p=>{ const s=(getData(monday)[p]||{})[day]||[]; return s.includes("nm_kantoor")||s.includes("kantoor"); });
+          const anyVm = group.some(p=>{ const s=(getData(monday)[p]||{})[day]||[]; return s.some(k=>k.startsWith("vm_")||k==="kantoor"||k==="thuis"||k==="vrij"); });
+          const anyNm = group.some(p=>{ const s=(getData(monday)[p]||{})[day]||[]; return s.some(k=>k.startsWith("nm_")||k==="kantoor"||k==="thuis"||k==="vrij"); });
+          if(vmK.length===0 && nmK.length===0) return "hele dag";
+          if(vmK.length===0 && anyVm) return "'s ochtends";
+          if(nmK.length===0 && anyNm) return "'s middags";
+          return "hele dag";
+        };
         results.push({
           label: `${DAY_NAMES[day]} ${d.getDate()} ${["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"][d.getMonth()]}`,
           geenBeheer,   alleenThuis,   beheerThuis,
+          beheerWhen: whenAbsentModal(MUST, beheerOpKantoor),
           geenSupport,  supportAlleenThuis, supportThuis,
+          supportWhen: whenAbsentModal(SUPPORT, supportOpKantoor),
           severity: (geenBeheer && !alleenThuis) || (geenSupport && !supportAlleenThuis) ? "critical" : "warn"
         });
       }
@@ -1415,12 +1443,12 @@ function showGeenBeheerModal(){
       html_inner += `<div style="padding:8px 0;border-bottom:1px solid ${borderCol};">
         <div style="font-size:12px;color:#fff;font-weight:600;margin-bottom:4px;">${r.label}</div>
         ${r.geenBeheer ? (r.alleenThuis
-          ? `<div style="font-size:10px;color:#ffb74d;margin-bottom:2px;">🏠 Beheer alleen thuis: ${r.beheerThuis.join(", ")}</div>`
-          : `<div style="font-size:10px;color:#f48fb1;margin-bottom:2px;">✗ Geen beheer op kantoor</div>`)
+          ? `<div style="font-size:10px;color:#ffb74d;margin-bottom:2px;">🏠 Beheer thuis (${r.beheerWhen}): ${r.beheerThuis.join(", ")}</div>`
+          : `<div style="font-size:10px;color:#f48fb1;margin-bottom:2px;">✗ Geen beheer op kantoor (${r.beheerWhen})</div>`)
           : ""}
         ${r.geenSupport ? (r.supportAlleenThuis
-          ? `<div style="font-size:10px;color:#ffb74d;margin-bottom:2px;">🏠 Support alleen thuis: ${r.supportThuis.join(", ")}</div>`
-          : `<div style="font-size:10px;color:#f48fb1;margin-bottom:2px;">✗ Geen support op kantoor</div>`)
+          ? `<div style="font-size:10px;color:#ffb74d;margin-bottom:2px;">🏠 Support thuis (${r.supportWhen}): ${r.supportThuis.join(", ")}</div>`
+          : `<div style="font-size:10px;color:#f48fb1;margin-bottom:2px;">✗ Geen support op kantoor (${r.supportWhen})</div>`)
           : ""}
       </div>`;
     });
