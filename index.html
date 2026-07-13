@@ -1167,7 +1167,7 @@ function buildWeekPanel(monday){
   hdr.appendChild(badge); hdr.appendChild(lbl); hdr.appendChild(resetBtn); panel.appendChild(hdr);
   const dayHdr=document.createElement("div"); dayHdr.className="day-header";
   // Personen die altijd op kantoor moeten zijn
-  const MUST_KANTOOR = ["Bram","Marco","Hans","Ted"];
+  const MUST_KANTOOR = ["Bram","Marco","Hans","Ted","Sercan"];
 
   DAYS.forEach((day,i)=>{
     const dayDate=addDays(monday,i), isToday=isSameDay(dayDate,today);
