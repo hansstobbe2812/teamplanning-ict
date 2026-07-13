@@ -410,12 +410,66 @@ function saveState(){
 
 function showSaveStatus(state){
   const ind=document.getElementById("save-ind"); if(!ind) return;
-  if(state==="ok"){    ind.textContent="✓ opgeslagen"; ind.style.color="#80cbc4"; }
-  else if(state==="error"){ ind.textContent="✗ mislukt";    ind.style.color="#f48fb1"; }
-  else {                ind.textContent="⟳ "+state;    ind.style.color="#ffb74d"; }
-  ind.style.opacity="1"; ind.style.fontSize="11px";
-  clearTimeout(ind._t);
-  if(state==="ok"||state==="error") ind._t=setTimeout(()=>{ ind.style.opacity="0"; },3000);
+  if(state==="ok"){
+    ind.textContent="✓ opgeslagen"; ind.style.color="#80cbc4";
+    ind.style.opacity="1";
+    clearTimeout(ind._t);
+    ind._t=setTimeout(()=>{ ind.style.opacity="0"; },3000);
+    // Verberg foutbanner als die nog zichtbaar is
+    hideSyncErrorBanner();
+  } else if(state==="error"||state.startsWith("error:")){
+    const msg = state.startsWith("error:") ? state.slice(6).trim() : "";
+    ind.textContent="✗ mislukt"; ind.style.color="#f48fb1";
+    ind.style.opacity="1";
+    clearTimeout(ind._t);
+    // Toon prominente foutbanner
+    showSyncErrorBanner(msg);
+  } else {
+    ind.textContent="⟳ "+state; ind.style.color="#ffb74d";
+    ind.style.opacity="1";
+    clearTimeout(ind._t);
+  }
+}
+
+function showSyncErrorBanner(detail){
+  let banner = document.getElementById("sync-error-banner");
+  if(!banner){
+    banner = document.createElement("div");
+    banner.id = "sync-error-banner";
+    document.body.appendChild(banner);
+  }
+  banner.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <span style="font-size:20px;">⚠️</span>
+      <div>
+        <div style="font-weight:700;font-size:13px;">Opslaan mislukt — wijzigingen zijn NIET bewaard</div>
+        <div style="font-size:11px;opacity:0.8;margin-top:2px;">
+          ${detail ? "Fout: "+detail+" · " : ""}Ververs de pagina of probeer opnieuw.
+        </div>
+      </div>
+      <button onclick="saveToGitHub().then(()=>{}).catch(()=>{})" style="margin-left:auto;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.4);color:#fff;border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:700;">↺ Opnieuw</button>
+      <button onclick="hideSyncErrorBanner()" style="background:transparent;border:none;color:rgba(255,255,255,0.5);font-size:16px;cursor:pointer;padding:0 4px;">✕</button>
+    </div>`;
+  banner.style.cssText = `
+    position:fixed;bottom:0;left:0;right:0;z-index:900;
+    background:linear-gradient(135deg,#b71c1c,#c62828);
+    color:#fff;padding:14px 20px;
+    box-shadow:0 -4px 24px rgba(183,28,28,0.6);
+    font-family:'Courier New',monospace;
+    animation:slideUp 0.3s ease;
+  `;
+  // Voeg animatie toe als die nog niet bestaat
+  if(!document.getElementById("sync-error-style")){
+    const style = document.createElement("style");
+    style.id = "sync-error-style";
+    style.textContent = "@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}";
+    document.head.appendChild(style);
+  }
+}
+
+function hideSyncErrorBanner(){
+  const b = document.getElementById("sync-error-banner");
+  if(b) b.remove();
 }
 
 // ── Template ─────────────────────────────────────────────────────
