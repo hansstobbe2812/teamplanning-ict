@@ -112,6 +112,7 @@ button { font-family:inherit; cursor:pointer; }
     <span id="health-github" title="GitHub verbinding">⬤ GitHub</span>
     <span id="health-data" title="Data integriteit">⬤ Data</span>
     <span id="health-sync" title="Laatste sync">⬤ Sync</span>
+    <span id="health-backup" title="Laatste backup">⬤ Backup</span>
     <span id="health-detail" style="color:rgba(255,255,255,0.25);margin-left:4px;"></span>
   </div>
   <div class="legend" id="legend"><span class="legend-title">Legenda</span><div class="legend-item"><div style="width:34px;height:20px;border-radius:5px;background:rgba(255,255,255,0.22);border:1.5px solid rgba(255,255,255,0.30);display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.35)">K</span></div><span class="legend-label">Kantoor</span></div><div class="legend-item"><div class="legend-dot" style="background:#4caf50;box-shadow:0 0 5px #4caf5066"></div><span class="legend-label">Thuis</span></div><div class="legend-item"><div class="legend-dot" style="background:#e53935;box-shadow:0 0 5px #e5393566"></div><span class="legend-label">Vrije dag</span></div><div class="legend-item"><div style="width:34px;height:20px;border-radius:5px;background:linear-gradient(to right,rgba(200,200,200,0.45) 50%,rgba(255,255,255,0.04) 50%);border:1.5px solid rgba(200,200,200,0.4);flex-shrink:0"></div><span class="legend-label">'s Ochtends kantoor</span></div><div class="legend-item"><div style="width:34px;height:20px;border-radius:5px;background:linear-gradient(to right,rgba(255,255,255,0.04) 50%,rgba(200,200,200,0.45) 50%);border:1.5px solid rgba(200,200,200,0.4);flex-shrink:0"></div><span class="legend-label">'s Middags kantoor</span></div><div class="legend-item"><div style="width:34px;height:20px;border-radius:5px;background:linear-gradient(to right,rgba(76,175,80,0.55) 50%,rgba(255,255,255,0.04) 50%);border:1.5px solid rgba(76,175,80,0.5);flex-shrink:0"></div><span class="legend-label">'s Ochtends thuis</span></div><div class="legend-item"><div style="width:34px;height:20px;border-radius:5px;background:linear-gradient(to right,rgba(255,255,255,0.04) 50%,rgba(76,175,80,0.55) 50%);border:1.5px solid rgba(76,175,80,0.5);flex-shrink:0"></div><span class="legend-label">'s Middags thuis</span></div><div class="legend-item"><div style="width:34px;height:20px;border-radius:5px;background:linear-gradient(to right,#e5393544 50%,transparent 50%);border:1.5px solid rgba(229,57,53,0.4);flex-shrink:0"></div><span class="legend-label">'s Ochtends vrij</span></div><div class="legend-item"><div style="width:34px;height:20px;border-radius:5px;background:linear-gradient(to right,transparent 50%,#e5393544 50%);border:1.5px solid rgba(229,57,53,0.4);flex-shrink:0"></div><span class="legend-label">'s Middags vrij</span></div><div class="legend-item"><div class="legend-dot" style="background:#ce93d8;box-shadow:0 0 5px #ce93d866"></div><span class="legend-label">Extern</span></div><span class="legend-hint">klik cel → kies status(sen)</span></div>
@@ -355,7 +356,14 @@ async function maybeBackup(stateJson){
   const time = now_dt.toTimeString().slice(0,5).replace(":","-");
   const filename = `${date}_${time}`;
   const content = encodeBase64(stateJson);
-  await ghPut(`backups/${filename}.json`, content, `Auto-backup ${filename}`).catch(()=>{});
+  const backupResult = await ghPut(`backups/${filename}.json`, content, `Auto-backup ${filename}`).catch(()=>null);
+  if(backupResult && backupResult.ok){
+    HEALTH.lastBackup = now;
+    HEALTH.lastBackupOk = true;
+  } else {
+    HEALTH.lastBackupOk = false;
+  }
+  updateHealthBar();
   // Verwijder backups ouder dan 14 dagen (fire-and-forget)
   try{
     const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 14);
@@ -502,7 +510,7 @@ function hideSyncErrorBanner(){
 }
 
 // ── Health status ─────────────────────────────────────────────────
-const HEALTH = { github: "unknown", data: "unknown", lastSync: null, lastSyncOk: false };
+const HEALTH = { github: "unknown", data: "unknown", lastSync: null, lastSyncOk: false, lastBackup: null, lastBackupOk: false };
 
 function updateHealthBar(){
   const el = {
@@ -530,11 +538,27 @@ function updateHealthBar(){
     el.sync.style.color = dot(syncState);
     const ago = secAgo < 60 ? secAgo+"s" : Math.round(secAgo/60)+"m";
     el.sync.title = (HEALTH.lastSyncOk ? "Sync OK" : "Sync mislukt") + " — "+ago+" geleden";
-    el.detail.textContent = (HEALTH.lastSyncOk ? "✓ " : "✗ ") + ago+" geleden";
+    el.detail.textContent = (HEALTH.lastSyncOk ? "sync ✓ " : "sync ✗ ") + ago+" geleden";
   } else {
     el.sync.style.color = dot("unknown");
     el.sync.title = "Nog niet gesynchroniseerd";
     el.detail.textContent = "";
+  }
+
+  // Backup timing
+  const elBackup = document.getElementById("health-backup");
+  if(elBackup){
+    if(HEALTH.lastBackup){
+      const bSecAgo = Math.round((Date.now()-HEALTH.lastBackup)/1000);
+      const bState = HEALTH.lastBackupOk ? (bSecAgo < 20*60 ? "ok" : "warn") : "error";
+      elBackup.style.color = dot(bState);
+      const bAgo = bSecAgo < 60 ? bSecAgo+"s" : bSecAgo < 3600 ? Math.round(bSecAgo/60)+"m" : Math.round(bSecAgo/3600)+"u";
+      elBackup.title = (HEALTH.lastBackupOk ? "Backup OK" : "Backup mislukt") + " — "+bAgo+" geleden";
+      el.detail.textContent += (HEALTH.lastBackupOk ? "  backup ✓ " : "  backup ✗ ") + bAgo+" geleden";
+    } else {
+      elBackup.style.color = dot("unknown");
+      elBackup.title = "Nog geen backup gemaakt";
+    }
   }
 }
 
