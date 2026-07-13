@@ -1183,7 +1183,12 @@ function buildWeekPanel(monday){
   DAYS.forEach((day,i)=>{
     const dayDate=addDays(monday,i), isToday=isSameDay(dayDate,today);
     const dayData=getData(monday);
-    const n=TEAM.filter(p=>(dayData[p]||{})[day]&&(dayData[p][day]||[]).includes("kantoor")).length;
+    const SUPPORT_ALL = ["Wim","Wouter","Annies","Bas"];
+    const BEHEER_ALL  = ["Bram","Marco","Hans","Ted","Sercan"];
+    const isK = p => { const s=(dayData[p]||{})[day]||[]; return s.includes("kantoor")||s.includes("vm_kantoor")||s.includes("nm_kantoor"); };
+    const nSupport = SUPPORT_ALL.filter(isK).length;
+    const nBeheer  = BEHEER_ALL.filter(isK).length;
+    const n = nSupport + nBeheer;
     const col=n>=7?"#f48fb1":n>=4?"#ffb74d":"#80cbc4";
 
     // Controleer of minstens één van MUST_KANTOOR op kantoor is
@@ -1265,7 +1270,7 @@ function buildWeekPanel(monday){
     };
     const warnHtml = (showBeheerWarn ? buildWarn(beheerVmWeg,beheerNmWeg,beheerVmThuis,beheerNmThuis,"beheer") : "")
                    + (showSupportWarn ? buildWarn(supportVmWeg,supportNmWeg,supportVmThuis,supportNmThuis,"support") : "");
-    dh.innerHTML=`<div class="day-hd-name${isToday?" today-col":""}">${day}</div><div class="day-hd-date${isToday?" today-col":""}">${fmtDate(dayDate)}</div>${isToday?`<div class="today-badge">vandaag</div>`:""}${warnHtml || `<div class="day-hd-count" id="cnt-${weekKey(monday)}-${day}" style="color:${col}">${n>0?n+"×":""}</div>`}`;
+    dh.innerHTML=`<div class="day-hd-name${isToday?" today-col":""}">${day}</div><div class="day-hd-date${isToday?" today-col":""}">${fmtDate(dayDate)}</div>${isToday?`<div class="today-badge">vandaag</div>`:""}${warnHtml || `<div class="day-hd-count" id="cnt-${weekKey(monday)}-${day}" style="color:${col};line-height:1.2">${n>0?`<span title="Totaal op kantoor">${n}×</span><br><span style="font-size:8px;opacity:0.7">B:${nBeheer} S:${nSupport}</span>`:""}` + `</div>` }`;
     dayHdr.appendChild(dh);
   });
   panel.appendChild(dayHdr);
