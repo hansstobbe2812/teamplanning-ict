@@ -1181,13 +1181,24 @@ function buildWeekPanel(monday){
       const sel = (dayData[p]||{})[day]||[];
       return sel.includes("kantoor") || sel.includes("vm_kantoor") || sel.includes("nm_kantoor");
     };
+    const SUPPORT_GRP = ["Wim","Wouter","Annies","Bas"];
     const noneOnKantoor = MUST_KANTOOR.every(p => !isOnKantoor(p));
-    const allHaveData = MUST_KANTOOR.some(p => ((dayData[p]||{})[day]||[]).length > 0);
-    const showWarning = noneOnKantoor && allHaveData;
+    const beheerHasData = MUST_KANTOOR.some(p => ((dayData[p]||{})[day]||[]).length > 0);
+    const showBeheerWarn = noneOnKantoor && beheerHasData;
+
+    const noneSupport = SUPPORT_GRP.every(p => !isOnKantoor(p));
+    const supportHasData = SUPPORT_GRP.some(p => ((dayData[p]||{})[day]||[]).length > 0);
+    const showSupportWarn = noneSupport && supportHasData;
 
     const dh=document.createElement("div"); dh.className=`day-hd${isToday?" today-col":""}`;
-    if(showWarning) dh.style.cssText="background:rgba(229,57,53,0.12);border-radius:6px;outline:1.5px solid rgba(229,57,53,0.5);";
-    dh.innerHTML=`<div class="day-hd-name${isToday?" today-col":""}">${day}</div><div class="day-hd-date${isToday?" today-col":""}">${fmtDate(dayDate)}</div>${isToday?`<div class="today-badge">vandaag</div>`:""}${showWarning?`<div style="font-size:8px;color:#f48fb1;font-weight:700;letter-spacing:0.3px;margin-top:1px;" title="Niemand van Bram/Marco/Hans/Ted op kantoor">⚠ geen beheer</div>`:`<div class="day-hd-count" id="cnt-${weekKey(monday)}-${day}" style="color:${col}">${n>0?n+"×":""}</div>`}`;
+    if(showBeheerWarn && showSupportWarn) dh.style.cssText="background:rgba(229,57,53,0.18);border-radius:6px;outline:2px solid rgba(229,57,53,0.7);";
+    else if(showBeheerWarn) dh.style.cssText="background:rgba(229,57,53,0.12);border-radius:6px;outline:1.5px solid rgba(229,57,53,0.5);";
+    else if(showSupportWarn) dh.style.cssText="background:rgba(255,183,77,0.10);border-radius:6px;outline:1.5px solid rgba(255,183,77,0.4);";
+    const warnHtml = [
+      showBeheerWarn ? `<div style="font-size:8px;color:#f48fb1;font-weight:700;letter-spacing:0.3px;margin-top:1px;" title="Niemand van Systeembeheer op kantoor">⚠ geen beheer</div>` : "",
+      showSupportWarn ? `<div style="font-size:8px;color:#ffb74d;font-weight:700;letter-spacing:0.3px;margin-top:1px;" title="Niemand van Support op kantoor">⚠ geen support</div>` : ""
+    ].join("");
+    dh.innerHTML=`<div class="day-hd-name${isToday?" today-col":""}">${day}</div><div class="day-hd-date${isToday?" today-col":""}">${fmtDate(dayDate)}</div>${isToday?`<div class="today-badge">vandaag</div>`:""}${warnHtml || `<div class="day-hd-count" id="cnt-${weekKey(monday)}-${day}" style="color:${col}">${n>0?n+"×":""}</div>`}`;
     dayHdr.appendChild(dh);
   });
   panel.appendChild(dayHdr);
@@ -1313,6 +1324,7 @@ document.getElementById("btn-next").addEventListener("click",()=>{ baseMonday=ad
 // ── Geen Beheer modal ────────────────────────────────────────────
 function showGeenBeheerModal(){
   const MUST = ["Bram","Marco","Hans","Ted","Sercan"];
+  const SUPPORT = ["Wim","Wouter","Annies","Bas"];
   const DAYS_LIST = ["MA","DI","WO","DO","VR"];
   const DAY_NAMES = {MA:"Maandag",DI:"Dinsdag",WO:"Woensdag",DO:"Donderdag",VR:"Vrijdag"};
 
@@ -1331,14 +1343,17 @@ function showGeenBeheerModal(){
       const dayDate = addDays(monday, i);
       if(dayDate < today) return; // verleden overslaan
       const dayData = getData(monday);
-      const hasAnyData = MUST.some(p => ((dayData[p]||{})[day]||[]).length > 0);
+      const hasAnyData = [...MUST,...SUPPORT].some(p => ((dayData[p]||{})[day]||[]).length > 0);
       if(!hasAnyData) return; // dag nog niet ingevuld
       const noneOnKantoor = MUST.every(p => !isOnKantoor(monday, p, day));
-      if(noneOnKantoor){
+      const noneSupport = SUPPORT.every(p => !isOnKantoor(monday, p, day));
+      const supportHasData = SUPPORT.some(p => ((dayData[p]||{})[day]||[]).length > 0);
+      if(noneOnKantoor || (noneSupport && supportHasData)){
         const d = addDays(monday, i);
         results.push({
           label: `${DAY_NAMES[day]} ${d.getDate()} ${["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"][d.getMonth()]}`,
-          missing: MUST.filter(p => !isOnKantoor(monday, p, day))
+          beheer: noneOnKantoor ? MUST.filter(p => !isOnKantoor(monday, p, day)) : [],
+          support: (noneSupport && supportHasData) ? SUPPORT.filter(p => !isOnKantoor(monday, p, day)) : []
         });
       }
     });
@@ -1357,9 +1372,10 @@ function showGeenBeheerModal(){
   } else {
     html_inner += `<div style="font-size:10px;color:#777;margin-bottom:12px;letter-spacing:1px;text-transform:uppercase;">Dagen zonder beheer (komende 4 weken)</div>`;
     results.forEach(r => {
-      html_inner += `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
-        <div style="min-width:130px;font-size:12px;color:#fff;font-weight:600;">${r.label}</div>
-        <div style="font-size:10px;color:#f48fb1;">${r.missing.join(", ")} afwezig</div>
+      html_inner += `<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
+        <div style="font-size:12px;color:#fff;font-weight:600;margin-bottom:3px;">${r.label}</div>
+        ${r.beheer.length ? `<div style="font-size:10px;color:#f48fb1;">⚠ Beheer: ${r.beheer.join(", ")} afwezig</div>` : ""}
+        ${r.support.length ? `<div style="font-size:10px;color:#ffb74d;">⚠ Support: ${r.support.join(", ")} afwezig</div>` : ""}
       </div>`;
     });
   }
