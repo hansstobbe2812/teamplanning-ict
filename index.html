@@ -166,7 +166,6 @@ function getWeekNumber(date){ const d=new Date(Date.UTC(date.getFullYear(),date.
 function fmtDate(d){ return d.toLocaleDateString("nl-NL",{day:"numeric",month:"short"}); }
 
 // ── Persistentie ────────────────────────────────────────────────
-const LS_KEY    = "teamplanning_ict_v2";
 
 function serializeState(){
   const me={};
@@ -187,9 +186,7 @@ function applyState(data){
 }
 
 
-// localStorage als snelle backup
-function saveLocal(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(serializeState())); }catch(e){} }
-function loadLocal(){ try{ const r=localStorage.getItem(LS_KEY); if(!r) return false; applyState(JSON.parse(r)); return true; }catch(e){ return false; } }
+// localStorage uitgeschakeld — GitHub is de enige bron van waarheid
 
 
 
@@ -432,7 +429,6 @@ async function saveToGitHub(){
 
 // Alles opslaan
 function saveState(){
-  saveLocal();
   clearTimeout(ghSaveTimer);
   ghSaveTimer = setTimeout(saveToGitHub, 1500);
 }
@@ -700,14 +696,9 @@ function propagateTemplateToAll(){
 (async ()=>{
   const ghLoaded = await loadFromGitHub();
   if(!ghLoaded){
-    // Fallback: localStorage
-    const lsRaw = localStorage.getItem(LS_KEY);
-    if(lsRaw){ try{ loadLocal(); }catch(e){ localStorage.removeItem(LS_KEY); } }
-    else {
-      const el=document.getElementById("data-store");
-      const raw=el&&el.textContent.trim();
-      if(raw&&raw!=="null"){ try{ applyState(JSON.parse(raw)); }catch(e){} }
-    }
+    // Geen localStorage fallback — GitHub is de enige bron van waarheid
+    // Verwijder eventuele oude localStorage data
+    try{ localStorage.clear(); }catch(e){}
   }
   TEAM = TEAM.filter(p => p !== "__divider__");
   propagateTemplateToAll();
