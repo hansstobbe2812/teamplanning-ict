@@ -641,6 +641,16 @@ const store = {};
 const manuallyEdited = {};
 
 function weekKey(monday){ return `${monday.getFullYear()}-W${String(getWeekNumber(monday)).padStart(2,"0")}`; }
+function getMondayFromKey(key){
+  // key = "2026-W29" → find the monday of that ISO week
+  const [yr, wStr] = key.split("-W");
+  const year = parseInt(yr), week = parseInt(wStr);
+  // Jan 4 is always in week 1
+  const jan4 = new Date(year, 0, 4);
+  const jan4Dow = jan4.getDay()||7;
+  const week1Mon = new Date(jan4.getTime() - (jan4Dow-1)*86400000);
+  return new Date(week1Mon.getTime() + (week-1)*7*86400000);
+}
 function weekMondayFromKey(k){ const [yr,wPart]=k.split("-W"); const wk=parseInt(wPart); const jan1=new Date(parseInt(yr),0,1); const j=jan1.getDay()||7; const m=new Date(jan1); m.setDate(jan1.getDate()+(wk-1)*7-(j-1)); return m; }
 
 function getData(monday){
@@ -1335,10 +1345,13 @@ function showGeenBeheerModal(){
     return sel.includes("kantoor")||sel.includes("vm_kantoor")||sel.includes("nm_kantoor");
   };
 
-  // Kijk 4 weken vooruit vanaf huidige maandag
+  // Kijk alle weken vooruit waarvoor data beschikbaar is
   const thisMonday = mondayOf(today);
-  for(let w=0; w<4; w++){
-    const monday = addWeeks(thisMonday, w);
+  const allMondays = Object.keys(store||{}).map(k=>{
+    const m=getMondayFromKey(k); return m >= thisMonday ? m : null;
+  }).filter(Boolean).sort((a,b)=>a-b);
+  const weeksToCheck = allMondays.length > 0 ? allMondays : [thisMonday];
+  for(const monday of weeksToCheck){
     DAYS_LIST.forEach((day, i) => {
       const dayDate = addDays(monday, i);
       if(dayDate < today) return; // verleden overslaan
@@ -1370,7 +1383,7 @@ function showGeenBeheerModal(){
   if(results.length === 0){
     html_inner += `<div style="color:#80cbc4;font-size:12px;padding:12px 0;">✓ Alle komende dagen is er iemand van Systeembeheer aanwezig.</div>`;
   } else {
-    html_inner += `<div style="font-size:10px;color:#777;margin-bottom:12px;letter-spacing:1px;text-transform:uppercase;">Dagen zonder beheer (komende 4 weken)</div>`;
+    html_inner += `<div style="font-size:10px;color:#777;margin-bottom:12px;letter-spacing:1px;text-transform:uppercase;">Dagen zonder beheer/support (alle komende weken)</div>`;
     results.forEach(r => {
       html_inner += `<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
         <div style="font-size:12px;color:#fff;font-weight:600;margin-bottom:3px;">${r.label}</div>
