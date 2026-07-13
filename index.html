@@ -1166,12 +1166,27 @@ function buildWeekPanel(monday){
   resetBtn.addEventListener("click",async e=>{ e.stopPropagation(); if(!await requireUnlock()) return; resetWeekToTemplate(monday); });
   hdr.appendChild(badge); hdr.appendChild(lbl); hdr.appendChild(resetBtn); panel.appendChild(hdr);
   const dayHdr=document.createElement("div"); dayHdr.className="day-header";
+  // Personen die altijd op kantoor moeten zijn
+  const MUST_KANTOOR = ["Bram","Marco","Hans","Ted"];
+
   DAYS.forEach((day,i)=>{
     const dayDate=addDays(monday,i), isToday=isSameDay(dayDate,today);
-    const n=TEAM.filter(p=>(getData(monday)[p]||{})[day]&&(getData(monday)[p][day]||[]).includes("kantoor")).length;
+    const dayData=getData(monday);
+    const n=TEAM.filter(p=>(dayData[p]||{})[day]&&(dayData[p][day]||[]).includes("kantoor")).length;
     const col=n>=7?"#f48fb1":n>=4?"#ffb74d":"#80cbc4";
+
+    // Controleer of minstens één van MUST_KANTOOR op kantoor is
+    const isOnKantoor = p => {
+      const sel = (dayData[p]||{})[day]||[];
+      return sel.includes("kantoor") || sel.includes("vm_kantoor") || sel.includes("nm_kantoor");
+    };
+    const noneOnKantoor = MUST_KANTOOR.every(p => !isOnKantoor(p));
+    const allHaveData = MUST_KANTOOR.some(p => ((dayData[p]||{})[day]||[]).length > 0);
+    const showWarning = noneOnKantoor && allHaveData;
+
     const dh=document.createElement("div"); dh.className=`day-hd${isToday?" today-col":""}`;
-    dh.innerHTML=`<div class="day-hd-name${isToday?" today-col":""}">${day}</div><div class="day-hd-date${isToday?" today-col":""}">${fmtDate(dayDate)}</div>${isToday?`<div class="today-badge">vandaag</div>`:""}<div class="day-hd-count" id="cnt-${weekKey(monday)}-${day}" style="color:${col}">${n>0?n+"×":""}</div>`;
+    if(showWarning) dh.style.cssText="background:rgba(229,57,53,0.12);border-radius:6px;outline:1.5px solid rgba(229,57,53,0.5);";
+    dh.innerHTML=`<div class="day-hd-name${isToday?" today-col":""}">${day}</div><div class="day-hd-date${isToday?" today-col":""}">${fmtDate(dayDate)}</div>${isToday?`<div class="today-badge">vandaag</div>`:""}${showWarning?`<div style="font-size:8px;color:#f48fb1;font-weight:700;letter-spacing:0.3px;margin-top:1px;" title="Niemand van Bram/Marco/Hans/Ted op kantoor">⚠ geen beheer</div>`:`<div class="day-hd-count" id="cnt-${weekKey(monday)}-${day}" style="color:${col}">${n>0?n+"×":""}</div>`}`;
     dayHdr.appendChild(dh);
   });
   panel.appendChild(dayHdr);
