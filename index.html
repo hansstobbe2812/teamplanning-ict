@@ -290,9 +290,16 @@ let ghSha = null;
 let ghSaveTimer = null;
 let ghSaving = false;
 
-// Prefetch: start state.json fetch meteen bij script-parse, vóór DOM-init
+// Prefetch: start alle fetches meteen bij script-parse, vóór DOM-init
+// 1. state.json — voor snelle eerste load
 const _prefetchState = fetch(
   `https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}?ref=${GH_BRANCH}&t=`+Date.now(),
+  {headers:{"Authorization":`Bearer ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}}
+);
+
+// 2. Backup listing — voor directe health bar weergave
+const _prefetchBackupList = fetch(
+  `https://api.github.com/repos/${GH_REPO}/contents/backups?ref=${GH_BRANCH}&t=`+Date.now(),
   {headers:{"Authorization":`Bearer ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}}
 );
 
@@ -594,11 +601,8 @@ function updateHealthBar(){
 // Update health bar elke 10 seconden
 setInterval(updateHealthBar, 10000);
 
-// Laad laatste backup-tijd van GitHub bij opstarten
-fetch(
-  `https://api.github.com/repos/${GH_REPO}/contents/backups?ref=${GH_BRANCH}&t=`+Date.now(),
-  {headers:{"Authorization":`Bearer ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}}
-).then(async r=>{
+// Laad laatste backup-tijd — gebruik prefetch-resultaat
+_prefetchBackupList.then(async r=>{
   if(!r.ok) return;
   const files = await r.json();
   if(!Array.isArray(files) || !files.length) return;
