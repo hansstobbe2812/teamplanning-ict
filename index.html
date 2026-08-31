@@ -317,30 +317,6 @@ const _prefetchState = fetch(
   {headers:{"Authorization":`Bearer ${GH_TOKEN}`,"Accept":"application/vnd.github.v3+json"}}
 );
 
-// Koppel prefetch direct aan render: zodra state binnenkomt → meteen tekenen
-// Dit vult de lege grid zo snel mogelijk, vóór de init-IIFE klaar is
-_prefetchState.then(async r => {
-  if(!r.ok) return;
-  try{
-    const d = await r.clone().json();
-    const text = atob(d.content.replace(/
-/g,""));
-    const data = JSON.parse(text);
-    if(data && data.store && data.team && data.team.length > 0){
-      ghSha = d.sha;
-      HEALTH.github = "ok"; HEALTH.data = "ok";
-      HEALTH.lastSync = Date.now(); HEALTH.lastSyncOk = true;
-      applyState(data);
-      TEAM = TEAM.filter(p => p !== "__divider__");
-      propagateTemplateToAll();
-      renderAndSync();
-      // Toon grid direct
-      const g = document.getElementById("main-grid");
-      if(g) g.style.visibility = "visible";
-    }
-  }catch(e){ console.warn("Prefetch render fout:", e); }
-}).catch(()=>{});
-
 // 2. Backup listing — voor directe health bar weergave
 const _prefetchBackupList = fetch(
   `https://api.github.com/repos/${GH_REPO}/contents/backups?ref=${GH_BRANCH}&t=`+Date.now(),
