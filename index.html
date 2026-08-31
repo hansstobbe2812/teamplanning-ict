@@ -176,15 +176,35 @@ function serializeState(){
 }
 function applyState(data){
   if(data.team) TEAM = data.team.filter(p => p !== "__divider__");
-  if(data.store) Object.keys(data.store).forEach(k=>{ store[k]=data.store[k]; });
+
+  if(data.store) Object.keys(data.store).forEach(k=>{
+    // Verwijder personen die niet meer in het team zitten
+    const week = data.store[k];
+    Object.keys(week).forEach(p=>{ if(!TEAM.includes(p)) delete week[p]; });
+    store[k] = week;
+  });
+
   if(data.template){
-    // Voeg ontbrekende personen toe aan template object
+    // Verwijder personen die niet meer in het team zitten uit template
     Object.keys(data.template).forEach(p=>{
+      if(!TEAM.includes(p)) return; // overgeslagen
       if(!template[p]){ template[p]={}; DAYS.forEach(d=>{ template[p][d]=[]; }); }
       Object.keys(data.template[p]).forEach(d=>{ template[p][d]=data.template[p][d]; });
     });
+    // Verwijder ook uit template object zelf als al geladen
+    Object.keys(template).forEach(p=>{ if(!TEAM.includes(p)) delete template[p]; });
   }
-  if(data.manuallyEdited) Object.keys(data.manuallyEdited).forEach(k=>{ manuallyEdited[k]=new Set(data.manuallyEdited[k]); });
+
+  if(data.manuallyEdited) Object.keys(data.manuallyEdited).forEach(k=>{
+    // Filter ook manuallyEdited entries voor verwijderde personen
+    manuallyEdited[k] = new Set((data.manuallyEdited[k]||[]).filter(e=>TEAM.includes(e.split("-")[0])));
+  });
+
+  // Sync data-store tag in HTML zodat verwijderde personen ook bij volgende laad weg zijn
+  try{
+    const el = document.getElementById("data-store");
+    if(el) el.textContent = JSON.stringify(serializeState());
+  }catch(e){}
 }
 
 
